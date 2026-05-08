@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
- 
+
 const SUPABASE_URL = "https://mtjthyjyzlfjmxefgqnq.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_1Vjg0GBeHL1ucCBETI5nOg_Vb3aMkHY";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
- 
+
 // ─── Default Kingdom House Data ───────────────────────────────────────────────
 const DEFAULT_IDENTITY = null;
- 
+
 const DEFAULT_PEOPLE = [];
- 
+
 const DEFAULT_GAPS = "";
- 
+
 // ─── API Helper ───────────────────────────────────────────────────────────────
 async function callClaude(prompt) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -23,16 +23,16 @@ async function callClaude(prompt) {
   const data = JSON.parse(raw);
   return data.content?.map(i => i.text || "").join("") || "";
 }
- 
+
 // ─── UI Primitives ─────────────────────────────────────────────────────────────
 const MONO = "'DM Mono', monospace";
 const DISPLAY = "'Plus Jakarta Sans', sans-serif";
 const BODY = "'DM Sans', sans-serif";
- 
+
 function Label({ c, children }) {
   return <p style={{ fontSize: 9, fontFamily: MONO, color: c || "var(--accent)", textTransform: "uppercase", letterSpacing: 2.5, margin: "0 0 8px", fontWeight: 500 }}>{children}</p>;
 }
- 
+
 function Card({ children, accent, warn, style: s }) {
   return (
     <div style={{
@@ -45,11 +45,11 @@ function Card({ children, accent, warn, style: s }) {
     }}>{children}</div>
   );
 }
- 
+
 function Tag({ children, color }) {
   return <span style={{ padding: "2px 10px", borderRadius: 3, background: `${color}18`, border: `1px solid ${color}30`, color, fontSize: 9, fontFamily: MONO, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 500 }}>{children}</span>;
 }
- 
+
 function Btn({ children, onClick, secondary, small, disabled, danger }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
@@ -63,7 +63,7 @@ function Btn({ children, onClick, secondary, small, disabled, danger }) {
     }}>{children}</button>
   );
 }
- 
+
 function Bar({ v, color }) {
   return (
     <div style={{ height: 2, background: "var(--border)", borderRadius: 1 }}>
@@ -71,16 +71,8 @@ function Bar({ v, color }) {
     </div>
   );
 }
- 
-function Spinner({ label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 13, height: 13, borderRadius: "50%", border: "1.5px solid rgba(228,131,34,0.2)", borderTop: "1.5px solid var(--accent)", animation: "spin 0.7s linear infinite" }} />
-      {label && <p style={{ fontSize: 10, color: "var(--text-primary)", fontFamily: MONO, margin: 0, letterSpacing: 1 }}>{label}</p>}
-    </div>
-  );
-}
- 
+
+
 function Animated({ children, delay = 0 }) {
   return (
     <div style={{ animation: `fadeUp 0.4s cubic-bezier(0.4,0,0.2,1) ${delay}ms both` }}>
@@ -88,10 +80,10 @@ function Animated({ children, delay = 0 }) {
     </div>
   );
 }
- 
+
 const scoreColor = s => s >= 80 ? "#7B9E6B" : s >= 60 ? "var(--accent)" : "#C0392B";
 const scoreLabel = s => s >= 80 ? "Clear" : s >= 60 ? "Developing" : "Critical";
- 
+
 // ─── Identity View ─────────────────────────────────────────────────────────────
 function IdentityView({ data, onEdit }) {
   return (
@@ -153,7 +145,7 @@ function IdentityView({ data, onEdit }) {
     </div>
   );
 }
- 
+
 // ─── Identity Edit ─────────────────────────────────────────────────────────────
 function IdentityEdit({ data, onSave, onCancel, isSetup }) {
   const [d, setD] = useState({ ...data, values: data.values.map(v => ({ ...v })) });
@@ -162,7 +154,7 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
   const ta = { width: "100%", padding: "11px 13px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" };
   const inp = { ...ta, minHeight: "auto", resize: "none" };
   const canSave = d.mission.trim().length > 5;
- 
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -177,14 +169,14 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
           <Btn small onClick={() => onSave(d)} disabled={!canSave}>{isSetup ? "Save & Continue →" : "Save Changes ✓"}</Btn>
         </div>
       </div>
- 
+
       {[["Mission", "mission", 80], ["Guiding Statement", "guiding", 80], ["North Star Vision", "vision_north", 80], ["Phase 1 Vision", "vision_phase", 100], ["Positioning Statement", "positioning", 120]].map(([label, key, h]) => (
         <div key={key} style={{ marginBottom: 18 }}>
           <Label>{label}</Label>
           <textarea value={d[key]} onChange={e => set(key, e.target.value)} style={{ ...ta, minHeight: h }} />
         </div>
       ))}
- 
+
       <Label>Core Values</Label>
       {d.values.map((v, i) => (
         <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 14, marginBottom: 10 }}>
@@ -203,7 +195,7 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
     </div>
   );
 }
- 
+
 // ─── People View ───────────────────────────────────────────────────────────────
 function EmptyPeopleState({ onAdd }) {
   return (
@@ -217,7 +209,7 @@ function EmptyPeopleState({ onAdd }) {
     </div>
   );
 }
- 
+
 function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRemoveRole }) {
   const tc = { pastor: "#FF7A5C", support: "#A87EC8", director: "var(--accent)", leader: "var(--accent)", vacant: "#E74C3C", coordinator: "#7EB8C8" };
   const [grades, setGrades] = useState({});
@@ -232,10 +224,10 @@ function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRem
   const [extraInfo, setExtraInfo] = useState("");
   const [addingRole, setAddingRole] = useState(people.length === 1 && people[0].name === "");
   const [newRole, setNewRole] = useState(people.length === 1 && people[0].name === "" ? { ...people[0] } : { type: "leader", name: "", role: "", owns: "", reports: "" });
- 
+
   const roleTypes = ["leader", "director", "coordinator", "support", "pastor", "vacant"];
   const inp = { width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box" };
- 
+
   const saveNewRole = () => {
     if (!newRole.name.trim() || !newRole.role.trim()) return;
     if (people.length === 1 && people[0].name === "") {
@@ -247,18 +239,18 @@ function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRem
     setNewRole({ type: "leader", name: "", role: "", owns: "", reports: "" });
     setAddingRole(false);
   };
- 
- 
+
+
   const gradePeople = async () => {
     setGrading(true); setGradeError("");
     const gradeable = people.filter(p => p.type !== "vacant");
     const prompt = `You are an organizational clarity expert grading role definitions for a business operating system.
- 
+
 Grade each role 0-100 on: specificity of ownership, clarity of winning criteria, appropriate scope.
- 
+
 Roles:
 ${gradeable.map((p, i) => `${i + 1}. ${p.role} (${p.name}): "${p.owns}" — Reports to: ${p.reports}`).join("\n")}
- 
+
 Return ONLY a raw JSON array, no markdown, no backticks:
 [{"role": "exact role name", "score": 85, "feedback": "One sharp sentence on strengths and what could be sharper."}]`;
     try {
@@ -272,36 +264,36 @@ Return ONLY a raw JSON array, no markdown, no backticks:
     } catch (e) { setGradeError(`Error: ${e.message}`); }
     setGrading(false);
   };
- 
+
   const getRecommendations = async (extra) => {
     setRecLoading(true); setRecError(""); setNeedsInfo(null);
     const vacants = people.filter(p => p.type === "vacant").map(p => p.role).join(", ");
     const overloaded = people.filter(p => p.reports && p.reports.includes("vacant")).map(p => p.name).join(", ");
     const prompt = `You are an expert organizational consultant analyzing a team structure for a business operating system called Perspexis.
- 
+
 ORGANIZATION: Kingdom House (Church Plant, Concord NC)
 FOUNDING PASTOR: Cody Killian (only paid staff, part-time)
 TOTAL TEAM: ${people.length} people (1 paid, rest volunteers)
- 
+
 STRUCTURAL PRESSURE POINTS:
 ${gaps}
- 
+
 VACANT ROLES: ${vacants}
 PEOPLE REPORTING TO PASTOR DUE TO VACANCIES: ${overloaded}
- 
+
 FULL TEAM:
 ${people.filter(p => p.type !== "vacant").map(p => `- ${p.role}: ${p.name} — ${p.owns}`).join("\n")}
- 
+
 ${extra ? `ADDITIONAL CONTEXT PROVIDED: ${extra}` : ""}
- 
+
 Your task: Provide 3-5 specific, actionable recommendations to alleviate the structural pressure points identified above.
- 
+
 First assess whether you have enough information to make specific recommendations. If you need more information, respond with ONLY this JSON:
 {"needsInfo": true, "question": "One specific question to ask the user to get the information you need"}
- 
+
 If you have enough information, respond with ONLY this JSON (no markdown, no backticks):
 {"needsInfo": false, "recommendations": [{"title": "Short title", "priority": "high/medium/low", "action": "Specific actionable recommendation in 2-3 sentences.", "impact": "What this fixes or improves."}]}`;
- 
+
     try {
       const text = await callClaude(prompt);
       const match = text.match(/\{[\s\S]*\}/);
@@ -312,7 +304,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
     } catch (e) { setRecError(`Error: ${e.message}`); }
     setRecLoading(false);
   };
- 
+
   const startEdit = (p) => { setEditingRole(p.role); setEditOwns(p.owns); };
   const saveEdit = (role) => {
     onUpdateRole(role, editOwns);
@@ -322,21 +314,21 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
     setGrades(newGrades);
     setRecs(null);
   };
- 
+
   const gradedRoles = Object.values(grades);
   const overallScore = gradedRoles.length > 0 ? Math.round(gradedRoles.reduce((s, g) => s + g.score, 0) / gradedRoles.length) : null;
   const priorityColor = { high: "#E74C3C", medium: "#F7DC6F", low: "var(--accent)" };
- 
+
   const groups = [
     { label: "Founding Pastor", types: ["pastor"] },
     { label: "Operations & Support", types: ["support"] },
     { label: "Level 1 — Directors", types: ["director", "vacant"] },
     { label: "Level 2 — Coordinators", types: ["coordinator"] },
   ];
- 
+
   const ta = { width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(228,131,34,0.25)", borderRadius: 7, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box", minHeight: 80 };
   const inpStyle = { width:"100%", padding:"9px 12px", background:"rgba(255,255,255,0.05)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text-primary)", fontFamily:BODY, fontSize:13, outline:"none", boxSizing:"border-box" };
- 
+
   return (
     <div>
       {/* Add Role */}
@@ -365,7 +357,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
           </div>
         </div></Animated>
       )}
- 
+
       {/* Grade Banner */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }}>
         <div>
@@ -394,7 +386,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
           {gradeError && <p style={{ fontSize: 11, color: "#E74C3C", fontFamily: MONO, margin: 0 }}>{gradeError}</p>}
         </div>
       </div>
- 
+
       {/* Roles */}
       {groups.map(g => {
         const members = people.filter(p => g.types.includes(p.type));
@@ -472,7 +464,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
           </div>
         );
       })}
- 
+
       {/* AI-Diagnosed Pressure Points */}
       <div style={{ background: "rgba(231,76,60,0.03)", border: "1px solid rgba(231,76,60,0.18)", borderLeft: "3px solid #E74C3C", borderRadius: 10, padding: 20, marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -485,15 +477,15 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
             const vacants = people.filter(p => p.type === "vacant").map(p => p.role).join(", ") || "None";
             const overloaded = people.filter(p => p.reports && p.reports.toLowerCase().includes("vacant")).map(p => `${p.name} (${p.role})`).join(", ") || "None";
             const prompt = `You are an organizational clarity expert analyzing a team structure.
- 
+
 Analyze this org chart and identify the real structural pressure points — places where the structure itself is creating friction, risk, or overload.
- 
+
 TEAM:
 ${people.map(p => `- ${p.role}: ${p.name} (${p.type}) — Reports to: ${p.reports} — Owns: ${p.owns}`).join("\n")}
- 
+
 VACANT ROLES: ${vacants}
 PEOPLE AFFECTED BY VACANCIES: ${overloaded}
- 
+
 Write 2-4 specific, honest pressure points in 2-3 sentences total. Be direct. Name the actual people and roles involved. Do not be generic. Return plain text only — no JSON, no bullet points, no headers. Just the paragraph.`;
             try {
               const text = await callClaude(prompt);
@@ -509,7 +501,7 @@ Write 2-4 specific, honest pressure points in 2-3 sentences total. Be direct. Na
           : <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--text-primary)", margin: 0 }}>{gaps}</p>
         }
       </div>
- 
+
       {/* AI Recommendations */}
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 20, marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -520,9 +512,9 @@ Write 2-4 specific, honest pressure points in 2-3 sentences total. Be direct. Na
           {!recLoading && <Btn onClick={() => getRecommendations(extraInfo)} secondary>{recs ? "Refresh Recommendations" : "Get AI Recommendations →"}</Btn>}
           {recLoading && <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}><Spinner medium label="Building AI recommendations..." /></div>}
         </div>
- 
+
         {recError && <p style={{ fontSize: 11, color: "#E74C3C", fontFamily: MONO, margin: "0 0 12px" }}>{recError}</p>}
- 
+
         {needsInfo && (
           <div style={{ padding: "16px", background: "rgba(247,220,111,0.06)", border: "1px solid rgba(247,220,111,0.2)", borderRadius: 8, marginBottom: 12 }}>
             <p style={{ fontSize: 10, fontFamily: MONO, color: "#F7DC6F", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}>More Information Needed</p>
@@ -531,7 +523,7 @@ Write 2-4 specific, honest pressure points in 2-3 sentences total. Be direct. Na
             <Btn onClick={() => getRecommendations(extraInfo)} disabled={!extraInfo.trim()}>Submit & Get Recommendations →</Btn>
           </div>
         )}
- 
+
         {recs && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {recs.map((r, i) => (
@@ -546,7 +538,7 @@ Write 2-4 specific, honest pressure points in 2-3 sentences total. Be direct. Na
             ))}
           </div>
         )}
- 
+
         {!recs && !needsInfo && !recLoading && (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0 }}>Click "Get AI Recommendations" to receive specific, actionable steps based on your team structure and pressure points.</p>
@@ -556,7 +548,7 @@ Write 2-4 specific, honest pressure points in 2-3 sentences total. Be direct. Na
     </div>
   );
 }
- 
+
 // ─── Rhythm Setup ──────────────────────────────────────────────────────────────
 function RhythmSetup({ onDone }) {
   const [step, setStep] = useState(0);
@@ -568,7 +560,7 @@ function RhythmSetup({ onDone }) {
   const can = [current.length > 15, filled.length >= 1, breaks.length > 15];
   const fs = { width: "100%", padding: "11px 13px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box" };
   const steps = ["Current State", "New Rhythms", "Breakdown"];
- 
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
@@ -592,7 +584,7 @@ function RhythmSetup({ onDone }) {
     </div>
   );
 }
- 
+
 function RhythmView({ data, onUpdate }) {
   const [cadences, setCadences] = useState(data.cadences);
   const [editingIdx, setEditingIdx] = useState(null);
@@ -605,9 +597,9 @@ function RhythmView({ data, onUpdate }) {
   const [impError, setImpError] = useState("");
   const [needsInfo, setNeedsInfo] = useState(null);
   const [extraInfo, setExtraInfo] = useState("");
- 
+
   const fs = { width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(228,131,34,0.25)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 12, outline: "none", boxSizing: "border-box" };
- 
+
   const startEdit = (i) => { setEditingIdx(i); setEditDraft({ ...cadences[i] }); };
   const saveEdit = () => {
     const updated = cadences.map((c, i) => i === editingIdx ? { ...editDraft } : c);
@@ -619,13 +611,13 @@ function RhythmView({ data, onUpdate }) {
     setGrades(newGrades);
     setImprovements(null);
   };
- 
+
   const addCadence = () => {
     const updated = [...cadences, { name: "New Meeting", freq: "", dur: "", who: "", purpose: "" }];
     setCadences(updated);
     onUpdate({ ...data, cadences: updated });
   };
- 
+
   const removeCadence = (i) => {
     const updated = cadences.filter((_, idx) => idx !== i);
     setCadences(updated);
@@ -635,23 +627,23 @@ function RhythmView({ data, onUpdate }) {
     setGrades(newGrades);
     setImprovements(null);
   };
- 
+
   const gradeRhythm = async () => {
     setGrading(true); setGradeError("");
     const prompt = `You are an organizational rhythm expert grading meeting cadences for a business operating system.
- 
+
 Grade each cadence 0-100 based on:
 - Frequency appropriateness for its stated purpose
 - Duration fit for what needs to be accomplished
 - Attendance clarity (right people in the room)
 - Purpose definition (is it clear and actionable?)
- 
+
 CURRENT STATE: "${data.current}"
 COMMUNICATION GAPS: "${data.breaks}"
- 
+
 CADENCES:
 ${cadences.map((c, i) => `${i + 1}. "${c.name}" — Frequency: ${c.freq}, Duration: ${c.dur}, Who: ${c.who}, Purpose: ${c.purpose}`).join("\n")}
- 
+
 Return ONLY a raw JSON array, no markdown, no backticks:
 [{"index": 0, "score": 85, "feedback": "One sharp sentence on what's strong and what could improve."}]`;
     try {
@@ -665,27 +657,27 @@ Return ONLY a raw JSON array, no markdown, no backticks:
     } catch (e) { setGradeError(`Error: ${e.message}`); }
     setGrading(false);
   };
- 
+
   const getImprovements = async (extra) => {
     setImpLoading(true); setImpError(""); setNeedsInfo(null);
     const prompt = `You are an expert organizational rhythm consultant analyzing meeting cadences.
- 
+
 ORGANIZATION CONTEXT:
 Current State: "${data.current}"
 Communication Gaps: "${data.breaks}"
 ${extra ? `Additional Context: "${extra}"` : ""}
- 
+
 CURRENT CADENCES:
 ${cadences.map((c, i) => {
   const g = grades[i];
   return `${i + 1}. "${c.name}" (Score: ${g ? g.score + "%" : "ungraded"}) — ${c.freq}, ${c.dur}, Attendees: ${c.who}, Purpose: ${c.purpose}`;
 }).join("\n")}
- 
+
 Assess whether you have enough context to make specific rhythm improvement recommendations.
- 
+
 If you need more information, respond ONLY with this JSON:
 {"needsInfo": true, "question": "One specific question to get the missing context"}
- 
+
 If you have enough, respond ONLY with this JSON (no markdown, no backticks):
 {"needsInfo": false, "improvements": [{"cadence": "cadence name or Overall", "priority": "high/medium/low", "suggestion": "Specific actionable improvement in 2-3 sentences.", "rationale": "Why this matters for organizational health."}]}`;
     try {
@@ -698,11 +690,11 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
     } catch (e) { setImpError(`Error: ${e.message}`); }
     setImpLoading(false);
   };
- 
+
   const gradedCount = Object.keys(grades).length;
   const overallScore = gradedCount > 0 ? Math.round(Object.values(grades).reduce((s, g) => s + g.score, 0) / gradedCount) : null;
   const priorityColor = { high: "#E74C3C", medium: "#F7DC6F", low: "var(--accent)" };
- 
+
   return (
     <div>
       {/* Grade Banner */}
@@ -733,16 +725,16 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
           {gradeError && <p style={{ fontSize: 11, color: "#E74C3C", fontFamily: MONO, margin: 0 }}>{gradeError}</p>}
         </div>
       </div>
- 
+
       {/* Current State */}
       <Card><Label>Where You Started</Label><p style={{ fontSize: 14, lineHeight: 1.75, color: "var(--text-primary)", margin: 0 }}>{data.current}</p></Card>
- 
+
       {/* Cadences */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <Label>Operating Rhythm</Label>
         <button onClick={addCadence} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text-primary)", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1, cursor: "pointer", padding: "4px 10px" }}>+ Add Cadence</button>
       </div>
- 
+
       {cadences.map((c, i) => {
         const grade = grades[i];
         const isEditing = editingIdx === i;
@@ -803,10 +795,10 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
           </div>
         );
       })}
- 
+
       {/* Communication Gaps */}
       <Card warn><Label c="#E74C3C">Communication Gaps Being Addressed</Label><p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--text-primary)", margin: 0 }}>{data.breaks}</p></Card>
- 
+
       {/* AI Improvements */}
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -849,50 +841,50 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
     </div>
   );
 }
- 
+
 // ─── Health Overview (POHI) ────────────────────────────────────────────────────
 function HealthOverview({ identity, people, gaps, rhythm }) {
   const [pohi, setPohi] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const hasRhythm = rhythm && rhythm.cadences;
- 
+
   const runAnalysis = async () => {
     setLoading(true); setError("");
     const vacants = people.filter(p => p.type === "vacant").map(p => p.role).join(", ") || "None";
     const prompt = `You are Perspexis, an AI-powered organizational health assessment system. Analyze this organization using the Perspexis Organizational Health Index (POHI) — a proprietary 6-dimension framework.
- 
+
 ORGANIZATION DATA:
 Mission: "${identity.mission}"
 Vision (North Star): "${identity.vision_north}"
 Vision (Phase 1): "${identity.vision_phase}"
 Values: ${identity.values.map(v => v.name).join(", ")}
 Positioning: "${identity.positioning}"
- 
+
 TEAM (${people.length} people):
 ${people.map(p => `- ${p.role}: ${p.name} (${p.type}) — ${p.owns}`).join("\n")}
 Vacant Roles: ${vacants}
 Structural Pressure: "${gaps}"
- 
+
 ${hasRhythm ? `RHYTHM:
 Current State: "${rhythm.current}"
 Cadences: ${rhythm.cadences.map(c => `${c.name} (${c.freq}, ${c.dur})`).join(", ")}
 Communication Gaps: "${rhythm.breaks}"` : "RHYTHM: Not yet completed"}
- 
+
 Score this organization across the 6 POHI dimensions (0-100 each):
- 
+
 1. PURPOSE CLARITY — How well-defined, specific, and compelling is the mission, vision, and values? Are they actionable or generic?
 2. PEOPLE CLARITY — How clearly defined are roles, ownership, and accountability? Is winning defined per role?
 3. OPERATIONAL RHYTHM — How consistent, purposeful, and well-structured are communication cadences? (Score 40 if not completed)
 4. STRUCTURAL INTEGRITY — How sound is the org structure? Consider vacancies, reporting overload, span of control.
 5. CULTURAL ALIGNMENT — Do the stated values appear to translate into observable organizational behaviors and design choices?
 6. GROWTH READINESS — How capable does this org appear of scaling — adding people, locations, or complexity — without breaking?
- 
+
 Then write a 3-4 sentence organizational profile narrative that gives an honest, specific assessment of this organization's health — what's strong, what's at risk, and what's the most important thing to address right now.
- 
+
 Return ONLY raw JSON, no markdown, no backticks:
 {"dimensions": [{"name": "Purpose Clarity", "score": 85, "insight": "One sharp sentence on this dimension."}, {"name": "People Clarity", "score": 72, "insight": "..."}, {"name": "Operational Rhythm", "score": 65, "insight": "..."}, {"name": "Structural Integrity", "score": 58, "insight": "..."}, {"name": "Cultural Alignment", "score": 80, "insight": "..."}, {"name": "Growth Readiness", "score": 62, "insight": "..."}], "overall": 70, "profile": "3-4 sentence narrative here."}`;
- 
+
     try {
       const text = await callClaude(prompt);
       const match = text.match(/\{[\s\S]*\}/);
@@ -901,9 +893,9 @@ Return ONLY raw JSON, no markdown, no backticks:
     } catch (e) { setError(`Error: ${e.message}`); }
     setLoading(false);
   };
- 
+
   const dimColors = ["var(--accent)", "#7EB8C8", "#A87EC8", "#FF7A5C", "#7EC898", "#C87E7E"];
- 
+
   return (
     <div>
       {/* POHI Banner */}
@@ -939,7 +931,7 @@ Return ONLY raw JSON, no markdown, no backticks:
           </div>
         )}
       </div>
- 
+
       {pohi && (
         <div>
           <Label>The 6 POHI Dimensions</Label>
@@ -955,13 +947,13 @@ Return ONLY raw JSON, no markdown, no backticks:
               </div>
             ))}
           </div>
- 
+
           {!hasRhythm && (
             <div style={{ padding: "14px 18px", background: "rgba(247,220,111,0.05)", border: "1px solid rgba(247,220,111,0.2)", borderRadius: 8, marginBottom: 16 }}>
               <p style={{ fontSize: 12, color: "#F7DC6F", fontFamily: MONO, margin: 0 }}>⚠ Complete the Rhythm layer to improve your Operational Rhythm and Growth Readiness scores.</p>
             </div>
           )}
- 
+
           <div style={{ textAlign: "center" }}>
             <Btn onClick={runAnalysis}>Re-Run Analysis →</Btn>
             {loading && <Spinner large label="Re-analyzing your organization..." />}
@@ -972,7 +964,7 @@ Return ONLY raw JSON, no markdown, no backticks:
     </div>
   );
 }
- 
+
 // ─── Main App ──────────────────────────────────────────────────────────────────
 const LAYERS = [
   { id: "health", label: "Health", icon: "◉", desc: "POHI organizational score" },
@@ -980,7 +972,7 @@ const LAYERS = [
   { id: "people", label: "People", icon: "◎", desc: "Roles and accountability" },
   { id: "rhythm", label: "Rhythm", icon: "◇", desc: "Meeting cadences" },
 ];
- 
+
 export default function PerspexisCore() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -994,7 +986,7 @@ export default function PerspexisCore() {
   const [rhythm, setRhythm] = useState(null);
   const [rhythmMode, setRhythmMode] = useState("setup");
   const [dataLoading, setDataLoading] = useState(false);
- 
+
   // ── Auth state listener ──────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1006,7 +998,7 @@ export default function PerspexisCore() {
     });
     return () => subscription.unsubscribe();
   }, []);
- 
+
   // ── Load user data when authenticated ───────────────────────────────────
   useEffect(() => {
     if (!user) return;
@@ -1026,68 +1018,68 @@ export default function PerspexisCore() {
     };
     loadData();
   }, [user]);
- 
+
   // ── Activity logger ──────────────────────────────────────────────────────
   const logActivity = async (action, layer, detail = "") => {
     if (!user) return;
     await supabase.from("activity_logs").insert({ user_id: user.id, action, layer, detail });
   };
- 
+
   // ── Save functions ───────────────────────────────────────────────────────
   const saveIdentity = async (d) => {
     setIdentity(d); setIdentityMode("view");
     await supabase.from("identity").upsert({ user_id: user.id, ...d, updated_at: new Date().toISOString() });
     await logActivity("Identity layer saved", "identity");
   };
- 
+
   const saveOnboarding = async (name, type) => {
     setOrgName(name); setOnboarded(true); setIdentityMode("setup");
     await supabase.from("profiles").update({ org_name: name, org_type: type }).eq("id", user.id);
     await logActivity("Onboarding completed", "onboarding", `${name} (${type})`);
   };
- 
+
   const savePeople = async (newPeople, newGaps) => {
     setPeople(newPeople);
     if (newGaps !== undefined) setGaps(newGaps);
     await supabase.from("people").upsert({ user_id: user.id, roles: newPeople, gaps: newGaps !== undefined ? newGaps : gaps, updated_at: new Date().toISOString() });
     await logActivity("People layer updated", "people");
   };
- 
+
   const saveRhythm = async (d) => {
     saveRhythm(d);
     await supabase.from("rhythm").upsert({ user_id: user.id, current_state: d.current, cadences: d.cadences, breaks: d.breaks, updated_at: new Date().toISOString() });
     await logActivity("Rhythm layer saved", "rhythm");
   };
- 
+
   const updateRole = (role, owns) => {
     const updated = people.map(r => r.role === role ? { ...r, owns } : r);
     savePeople(updated, gaps);
   };
- 
+
   const updateRhythm = (updated) => { saveRhythm(updated); };
   const done = { health: !!identity, identity: !!identity, people: people.length > 0, rhythm: !!rhythm };
   const completedLayers = [!!identity, people.length > 0, !!rhythm].filter(Boolean).length;
   const pct = Math.round((completedLayers / 3) * 100);
- 
+
   // ── Auth and loading gates ───────────────────────────────────────────────
   if (authLoading) return (
     <div style={{ minHeight: "100vh", background: "#071827", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Spinner large label="Loading clarity..." />
     </div>
   );
- 
+
   if (!user) return <AuthScreen onAuth={setUser} />;
- 
+
   if (dataLoading) return (
     <div style={{ minHeight: "100vh", background: "#071827", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Spinner large label="Loading your organization..." />
     </div>
   );
- 
+
   if (!onboarded) return (
     <OnboardingScreen onStart={(name, type) => saveOnboarding(name, type)} />
   );
- 
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-primary)", fontFamily: BODY }}>
       <style>{`
@@ -1125,7 +1117,7 @@ export default function PerspexisCore() {
         input::placeholder, textarea::placeholder { color: #94A3B8 !important; }
         input:focus, textarea:focus { border-color: #FF7A5C !important; outline: none; }
       `}</style>
- 
+
       <div style={{ borderBottom: "1px solid var(--border)", padding: "10px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--surface)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1144,7 +1136,7 @@ export default function PerspexisCore() {
           <button onClick={() => supabase.auth.signOut()} style={{ padding: "5px 12px", background: "transparent", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text-secondary)", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1, cursor: "pointer" }}>Sign Out</button>
         </div>
       </div>
- 
+
       <div style={{ display: "flex", height: "calc(100vh - 56px)" }}>
         <div style={{ width: 194, borderRight: "1px solid var(--border)", padding: "18px 10px", flexShrink: 0, position: "relative", background: "rgba(16,37,52,0.6)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
@@ -1172,7 +1164,7 @@ export default function PerspexisCore() {
             </div>
           </div>
         </div>
- 
+
         <div style={{ flex: 1, overflow: "auto", padding: "30px 34px" }}>
           {LAYERS.map(l => active === l.id && (
             <div key={l.id}>
@@ -1185,7 +1177,7 @@ export default function PerspexisCore() {
                 </div>
                 <p style={{ color: "var(--text-primary)", fontSize: 13, margin: 0, fontFamily: DISPLAY, opacity: 0.7 }}>{l.id === "health" ? "Perspexis Organizational Health Index — a proprietary 6-dimension assessment" : l.desc}</p>
               </div>
- 
+
               {l.id === "health" && <HealthOverview identity={identity} people={people} gaps={gaps} rhythm={rhythm} />}
               {l.id === "identity" && (
                 !identity
@@ -1211,7 +1203,9 @@ export default function PerspexisCore() {
       </div>
     </div>
   );
-}function Spinner({ label, large, medium }) {
+}
+
+function Spinner({ label, large, medium }) {
   // ── Large: full branded loader with rotating arc + icon + text ──────────
   if (large) {
     return (
@@ -1235,7 +1229,7 @@ export default function PerspexisCore() {
       </div>
     );
   }
- 
+
   // ── Medium: arc spinner + icon + label, centered ────────────────────────
   if (medium) {
     return (
@@ -1256,7 +1250,7 @@ export default function PerspexisCore() {
       </div>
     );
   }
- 
+
   // ── Small: inline minimal arc spinner ───────────────────────────────────
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1272,8 +1266,8 @@ export default function PerspexisCore() {
     </div>
   );
 }
- 
- 
+
+
 // ─── Auth Screen ────────────────────────────────────────────────────────────
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
@@ -1282,9 +1276,9 @@ function AuthScreen({ onAuth }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
- 
+
   const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 };
- 
+
   const handleSubmit = async () => {
     setLoading(true); setError(""); setMessage("");
     if (mode === "login") {
@@ -1302,7 +1296,7 @@ function AuthScreen({ onAuth }) {
     }
     setLoading(false);
   };
- 
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DISPLAY }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }`}</style>
@@ -1332,13 +1326,13 @@ function AuthScreen({ onAuth }) {
     </div>
   );
 }
- 
+
 // ─── Onboarding Welcome Screen ─────────────────────────────────────────────
 function OnboardingScreen({ onStart }) {
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const orgTypes = ["Business", "Church / Ministry", "Nonprofit", "Agency", "Other"];
- 
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DISPLAY }}>
       <style>{`
@@ -1348,9 +1342,9 @@ function OnboardingScreen({ onStart }) {
         @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .type-btn:hover { border-color: #FF7A5C !important; color: #FF7A5C !important; }
       `}</style>
- 
+
       <div style={{ maxWidth: 520, width: "90%", animation: "fadeUp 0.5s ease both" }}>
- 
+
         {/* Logo + spinner icon */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 48 }}>
           <div style={{ position: "relative", width: 100, height: 100, marginBottom: 24 }}>
@@ -1368,14 +1362,14 @@ function OnboardingScreen({ onStart }) {
           <img src="data:image/png;base64,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" alt="Perspexis" style={{ height: 44, width: "auto", objectFit: "contain", filter: "brightness(1.5) contrast(1.1)", marginBottom: 12 }} />
           <p style={{ fontSize: 13, fontFamily: BODY, color: "var(--text-secondary)", margin: 0, letterSpacing: 0.3 }}>Clarity. Alignment. Momentum.</p>
         </div>
- 
+
         {/* Welcome card */}
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 36, boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px", letterSpacing: -0.3 }}>Welcome to Perspexis</h1>
           <p style={{ fontSize: 14, fontFamily: BODY, color: "var(--text-secondary)", margin: "0 0 28px", lineHeight: 1.65 }}>
             Let's build your operating system. Start by telling us about your organization.
           </p>
- 
+
           {/* Org name */}
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 8px" }}>Organization Name</p>
@@ -1393,7 +1387,7 @@ function OnboardingScreen({ onStart }) {
               }}
             />
           </div>
- 
+
           {/* Org type */}
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 10px" }}>Organization Type</p>
@@ -1410,7 +1404,7 @@ function OnboardingScreen({ onStart }) {
               ))}
             </div>
           </div>
- 
+
           {/* CTA */}
           <button
             onClick={() => name.trim() && type && onStart(name.trim(), type)}
@@ -1427,7 +1421,7 @@ function OnboardingScreen({ onStart }) {
             Build My Operating System →
           </button>
         </div>
- 
+
         <p style={{ textAlign: "center", fontSize: 11, fontFamily: MONO, color: "var(--text-secondary)", marginTop: 20, opacity: 0.5 }}>
           Built for Leadership. Designed for Clarity.
         </p>
@@ -1435,6 +1429,3 @@ function OnboardingScreen({ onStart }) {
     </div>
   );
 }
- 
- 
- 
