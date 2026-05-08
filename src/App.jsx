@@ -67,22 +67,7 @@ function Bar({ v, color }) {
   );
 }
 
-function Spinner({ label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 13, height: 13, borderRadius: "50%", border: "1.5px solid rgba(228,131,34,0.2)", borderTop: "1.5px solid var(--accent)", animation: "spin 0.7s linear infinite" }} />
-      {label && <p style={{ fontSize: 10, color: "var(--text-primary)", fontFamily: MONO, margin: 0, letterSpacing: 1 }}>{label}</p>}
-    </div>
-  );
-}
 
-function Animated({ children, delay = 0 }) {
-  return (
-    <div style={{ animation: `fadeUp 0.4s cubic-bezier(0.4,0,0.2,1) ${delay}ms both` }}>
-      {children}
-    </div>
-  );
-}
 
 const scoreColor = s => s >= 80 ? "#7B9E6B" : s >= 60 ? "var(--accent)" : "#C0392B";
 const scoreLabel = s => s >= 80 ? "Clear" : s >= 60 ? "Developing" : "Critical";
