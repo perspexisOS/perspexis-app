@@ -1509,3 +1509,4 @@ function OnboardingScreen({ onStart }) {
     </div>
   );
 }
+;
