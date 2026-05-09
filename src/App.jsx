@@ -1372,8 +1372,9 @@ function AuthScreen({ onAuth }) {
         @keyframes arcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         input::placeholder { color: #94A3B8 !important; }
         @media (max-width: 767px) {
-          .px-auth-left  { display: none !important; }
-          .px-auth-right { width: 100% !important; padding: 40px 24px !important; }
+          .px-auth-left      { display: none !important; }
+          .px-auth-right     { width: 100% !important; padding: 40px 24px !important; }
+          .px-show-mobile    { display: flex !important; }
         }
       `}</style>
 
@@ -1418,6 +1419,9 @@ function AuthScreen({ onAuth }) {
       {/* Right panel — auth form */}
       <div className="px-auth-right" style={{ width: 480, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", animation: "fadeUp 0.4s ease 0.1s both" }}>
         <div style={{ width: "100%" }}>
+          <div className="px-show-mobile" style={{ display: "none", justifyContent: "center", marginBottom: 28 }}>
+            <PerspexisLogo height={120} />
+          </div>
           <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, color: "#F5F7FA", margin: "0 0 6px" }}>
             {mode === "login" ? "Welcome back." : mode === "signup" ? "Create your account." : "Reset your password."}
           </h2>
