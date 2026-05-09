@@ -2146,10 +2146,14 @@ function MavenChat({ user, orgName, orgType, identity, people, gaps, rhythm, act
   useEffect(() => { if (open) { inputRef.current?.focus(); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); } }, [open]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
-  // Auto-open for new users
+  // Auto-open: check server for conversation history on mount
   useEffect(() => {
-    if (isNewUser && !initialized) { setOpen(true); }
-  }, [isNewUser]);
+    const checkNew = async () => {
+      const { data } = await supabase.from('maven_conversations').select('id').eq('user_id', user.id).maybeSingle();
+      if (!data) { setOpen(true); setPulse(true); } // No history = new user
+    };
+    checkNew();
+  }, []);
 
   const load = async () => {
     if (initialized) return;
@@ -2159,6 +2163,7 @@ function MavenChat({ user, orgName, orgType, identity, people, gaps, rhythm, act
       setInitialized(true);
       setPulse(false);
     } else {
+      // No history = brand new user regardless of localStorage
       await welcome(true);
     }
   };
@@ -2584,7 +2589,7 @@ function PerspexisCore() {
         supabase.from("people").select("*").eq("user_id", oid).single(),
         supabase.from("rhythm").select("*").eq("user_id", oid).single(),
       ]);
-      if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOrgType(profileRes.data.org_type || ""); setOnboarded(true); if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0); }
+      if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOrgType(profileRes.data.org_type || ""); setOnboarded(true); }
       if (identityRes.data) { setIdentity({ mission: identityRes.data.mission, vision_north: identityRes.data.vision_north, vision_phase: identityRes.data.vision_phase, values: identityRes.data.values, positioning: identityRes.data.positioning }); setIdentityMode("view"); }
       if (peopleRes.data?.roles) { setPeople(peopleRes.data.roles); setGaps(peopleRes.data.gaps || ""); }
       if (rhythmRes.data) { setRhythm({ current: rhythmRes.data.current_state, cadences: rhythmRes.data.cadences, breaks: rhythmRes.data.breaks }); setRhythmMode("view"); }
@@ -2610,7 +2615,7 @@ function PerspexisCore() {
     setOrgName(name); setOrgType(type || ""); setOnboarded(true); setIdentityMode("setup");
     await supabase.from("profiles").upsert({ id: user.id, org_name: name, org_type: type }, { onConflict: "id" });
     await logActivity("Onboarding completed", "onboarding", `${name} (${type})`);
-    if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0);
+    // Maven determines new-user state from maven_conversations table
   };
 
   const savePeople = async (newPeople, newGaps) => {
@@ -2646,10 +2651,7 @@ function PerspexisCore() {
     if (newGaps !== "diagnosing") savePeople(people, newGaps);
   };
 
-  const completeTutorial = () => {
-    localStorage.setItem(`px_tutorial_${user.id}`, "1");
-    setTutorialStep(null);
-  };
+  const completeTutorial = () => { setTutorialStep(null); };
   const advanceTutorial = () => {
     const next = tutorialStep + 1;
     if (next >= TUTORIAL_STEPS.length) { completeTutorial(); return; }
