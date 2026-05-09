@@ -1433,61 +1433,74 @@ function PerspexisLogo() {
   return (
     <svg
       width="200"
-      height="122"
-      viewBox="0 0 500 305"
+      height="90"
+      viewBox="0 0 880 400"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Perspexis"
     >
       <defs>
-        <linearGradient id="coral" x1="180" y1="70" x2="320" y2="130">
+        <linearGradient id="coral" x1="380" y1="72" x2="500" y2="150">
           <stop stopColor="#FF7A66" />
           <stop offset="1" stopColor="#F26751" />
         </linearGradient>
-        <linearGradient id="teal" x1="130" y1="135" x2="370" y2="135">
-          <stop stopColor="#42AFC0" />
-          <stop offset="1" stopColor="#1F7F8E" />
+        <linearGradient id="teal" x1="330" y1="135" x2="550" y2="195">
+          <stop stopColor="#4DB7C7" />
+          <stop offset="1" stopColor="#2292A4" />
         </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="6" stdDeviation="4" floodOpacity="0.35" />
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#000" floodOpacity="0.22" />
         </filter>
       </defs>
-      {/* Top coral diamond */}
+      {/* Coral top diamond */}
       <path
-        d="M250 54 L316 94 Q326 100 316 107 L250 147 L184 107 Q174 100 184 94 Z"
+        d="M440 72 L498 107 Q505 111 498 116 L440 151 L382 116 Q375 111 382 107 Z"
         fill="url(#coral)"
-        filter="url(#shadow)"
+        filter="url(#softShadow)"
       />
-      {/* Teal chevron layer */}
+      {/* Teal upper chevron */}
       <path
-        d="M115 142 Q115 132 126 126 L148 113 Q158 108 168 114 L250 162 L332 114 Q342 108 352 113 L374 126 Q385 132 385 142 L385 157 Q385 166 376 171 L262 238 Q250 245 238 238 L124 171 Q115 166 115 157 Z"
+        d="M343 139 Q367 124 391 139 L440 168 L489 139 Q513 124 537 139 L542 142 Q550 147 550 157 L550 178 Q550 187 542 192 L440 253 L338 192 Q330 187 330 178 L330 157 Q330 147 338 142 Z"
         fill="url(#teal)"
-        filter="url(#shadow)"
+        filter="url(#softShadow)"
       />
-      {/* White lower chevron layer */}
+      {/* White lower chevron */}
       <path
-        d="M115 198 Q115 188 126 182 L148 169 Q158 164 168 170 L250 218 L332 170 Q342 164 352 169 L374 182 Q385 188 385 198 L385 213 Q385 222 376 227 L262 294 Q250 301 238 294 L124 227 Q115 222 115 213 Z"
-        fill="#F4F4F2"
-        stroke="#D7D7D2"
+        d="M343 186 Q367 171 391 186 L440 215 L489 186 Q513 171 537 186 L542 189 Q550 194 550 204 L550 225 Q550 234 542 239 L440 300 L338 239 Q330 234 330 225 L330 204 Q330 194 338 189 Z"
+        fill="#F6F6F3"
+        stroke="#DADAD6"
         strokeWidth="3"
-        filter="url(#shadow)"
+        filter="url(#softShadow)"
       />
       {/* Wordmark */}
       <text
-        x="250"
-        y="275"
+        x="440"
+        y="255"
         textAnchor="middle"
-        fontFamily="'Orbitron', 'Audiowide', 'Eurostile', 'Michroma', sans-serif"
-        fontSize="64"
-        fontWeight="700"
-        letterSpacing="-3"
-        fill="#EDEDEB"
-        stroke="#3A3A3A"
+        fontFamily="Arial Rounded MT Bold, Helvetica Rounded, Arial, sans-serif"
+        fontSize="52"
+        fontWeight="800"
+        letterSpacing="-4"
+        fill="#F1F1EF"
+        stroke="#D3D3CF"
         strokeWidth="2"
         paintOrder="stroke fill"
       >
         perspexis
+      </text>
+      {/* Tagline */}
+      <text
+        x="440"
+        y="328"
+        textAnchor="middle"
+        fontFamily="Inter, Arial, sans-serif"
+        fontSize="20"
+        fontWeight="500"
+        letterSpacing="18"
+        fill="#0B0B0B"
+      >
+        CLARITY. ALIGNMENT. MOMENTUM.
       </text>
     </svg>
   );
