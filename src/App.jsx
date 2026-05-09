@@ -215,29 +215,28 @@ function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRem
   const [grades, setGrades] = useState({});
   const [grading, setGrading] = useState(false);
   const [gradeError, setGradeError] = useState("");
-  const [editingRole, setEditingRole] = useState(null);
-  const [editOwns, setEditOwns] = useState("");
+  const [editDraft, setEditDraft] = useState(null);
   const [recs, setRecs] = useState(null);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState("");
   const [needsInfo, setNeedsInfo] = useState(null);
   const [extraInfo, setExtraInfo] = useState("");
   const [addingRole, setAddingRole] = useState(people.length === 1 && people[0].name === "");
-  const [newRole, setNewRole] = useState(people.length === 1 && people[0].name === "" ? { ...people[0] } : { type: "leader", name: "", role: "", owns: "", reports: "" });
+  const [newRole, setNewRole] = useState(people.length === 1 && people[0].name === "" ? { ...people[0] } : { type: "leader", name: "", role: "", owns: "", winning: "", reports: "", vacant: false });
 
-  const roleTypes = ["leader", "director", "coordinator", "support", "pastor", "vacant"];
+  const roleTypes = ["leader", "director", "coordinator", "support", "pastor"];
   const inp = { width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box" };
 
 
   const gradePeople = async () => {
     setGrading(true); setGradeError("");
-    const gradeable = people.filter(p => p.type !== "vacant");
+    const gradeable = people.filter(p => !(p.vacant === true || p.type === "vacant"));
     const prompt = `You are an organizational clarity expert grading role definitions for a business operating system.
 
-Grade each role 0-100 on: specificity of ownership, clarity of winning criteria, appropriate scope.
+Grade each role 0-100 on: specificity of ownership, clarity of what winning looks like, and appropriateness of scope.
 
 Roles:
-${gradeable.map((p, i) => `${i + 1}. ${p.role} (${p.name}): "${p.owns}" — Reports to: ${p.reports}`).join("\n")}
+${gradeable.map((p, i) => `${i + 1}. ${p.role} (${p.name})\n   Owns: "${p.owns}"${p.winning ? `\n   Winning looks like: "${p.winning}"` : ""}\n   Reports to: ${p.reports}`).join("\n")}
 
 Return ONLY a raw JSON array, no markdown, no backticks:
 [{"role": "exact role name", "score": 85, "feedback": "One sharp sentence on strengths and what could be sharper."}]`;
@@ -255,7 +254,7 @@ Return ONLY a raw JSON array, no markdown, no backticks:
 
   const getRecommendations = async (extra) => {
     setRecLoading(true); setRecError(""); setNeedsInfo(null);
-    const vacants = people.filter(p => p.type === "vacant").map(p => p.role).join(", ");
+    const vacants = people.filter(p => p.vacant === true || p.type === "vacant").map(p => p.role).join(", ");
     const overloaded = people.filter(p => p.reports && p.reports.includes("vacant")).map(p => p.name).join(", ");
     const prompt = `You are an expert organizational consultant analyzing a team structure for a business operating system called Perspexis.
 
@@ -270,7 +269,7 @@ VACANT ROLES: ${vacants}
 PEOPLE REPORTING TO PASTOR DUE TO VACANCIES: ${overloaded}
 
 FULL TEAM:
-${people.filter(p => p.type !== "vacant").map(p => `- ${p.role}: ${p.name} — ${p.owns}`).join("\n")}
+${people.filter(p => !(p.vacant === true || p.type === "vacant")).map(p => `- ${p.role}: ${p.name} — Owns: ${p.owns}${p.winning ? ` | Winning: ${p.winning}` : ""}`).join("\n")}
 
 ${extra ? `ADDITIONAL CONTEXT PROVIDED: ${extra}` : ""}
 
@@ -293,14 +292,20 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
     setRecLoading(false);
   };
 
-  const startEdit = (p) => { setEditingRole(p.role); setEditOwns(p.owns); };
-  const saveEdit = (role) => {
-    onUpdateRole(role, editOwns);
-    setEditingRole(null);
-    const newGrades = { ...grades };
-    delete newGrades[role];
-    setGrades(newGrades);
-    setRecs(null);
+  const startEdit = (p) => {
+    const isVacant = p.vacant === true || p.type === "vacant";
+    setEditDraft({ _orig: p.role, name: p.name || "", role: p.role, type: isVacant ? "leader" : (p.type || "leader"), owns: p.owns || "", winning: p.winning || "", reports: p.reports || "", vacant: isVacant });
+  };
+  const saveEdit = () => {
+    if (!editDraft) return;
+    const { _orig, ...roleData } = editDraft;
+    onUpdateRole(_orig, roleData);
+    const ng = { ...grades }; delete ng[_orig]; setGrades(ng);
+    setEditDraft(null); setRecs(null);
+  };
+  const deleteRole = () => {
+    if (!editDraft || !window.confirm(`Remove "${editDraft.role}" from the org chart?`)) return;
+    onRemoveRole(editDraft._orig); setEditDraft(null);
   };
 
   const gradedRoles = Object.values(grades);
@@ -310,8 +315,9 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
   const groups = [
     { label: "Founding Pastor", types: ["pastor"] },
     { label: "Operations & Support", types: ["support"] },
-    { label: "Level 1 — Directors", types: ["director", "vacant"] },
+    { label: "Level 1 — Directors", types: ["director"] },
     { label: "Level 2 — Coordinators", types: ["coordinator"] },
+    { label: "Team Leaders", types: ["leader"] },
   ];
 
   const ta = { width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box", minHeight: 80 };
@@ -329,7 +335,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
             <p style={{ fontSize: 11, fontFamily: MONO, color: "var(--accent)", margin: 0, textTransform: "uppercase", letterSpacing: 1.5 }}>New Role</p>
             <div style={{ display: "flex", gap: 8 }}>
               <Btn secondary small onClick={() => setAddingRole(false)}>Cancel</Btn>
-              <Btn small onClick={() => { if(newRole.name.trim()&&newRole.role.trim()){ onAddRole&&onAddRole({...newRole}); setNewRole({type:"leader",name:"",role:"",owns:"",reports:""}); setAddingRole(false); }}} disabled={!newRole.name.trim()||!newRole.role.trim()}>Add Role ✓</Btn>
+              <Btn small onClick={() => { if(newRole.name.trim()&&newRole.role.trim()){ onAddRole&&onAddRole({...newRole}); setNewRole({type:"leader",name:"",role:"",owns:"",winning:"",reports:"",vacant:false}); setAddingRole(false); }}} disabled={!newRole.name.trim()||!newRole.role.trim()}>Add Role ✓</Btn>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }} className="px-grid-3">
@@ -339,8 +345,9 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
               {["leader","director","coordinator","support","pastor","vacant"].map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
             </select></div>
           </div>
+          <div style={{ marginBottom: 10 }}><Label>Owns</Label><input value={newRole.owns} onChange={e=>setNewRole(p=>({...p,owns:e.target.value}))} placeholder="What this role is responsible for" style={inpStyle} /></div>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }} className="px-grid-2">
-            <div><Label>Owns & Winning</Label><input value={newRole.owns} onChange={e=>setNewRole(p=>({...p,owns:e.target.value}))} placeholder="What this role owns and what winning looks like" style={inpStyle} /></div>
+            <div><Label>Winning Looks Like</Label><input value={newRole.winning||""} onChange={e=>setNewRole(p=>({...p,winning:e.target.value}))} placeholder="What does success look like in this role" style={inpStyle} /></div>
             <div><Label>Reports To</Label><input value={newRole.reports} onChange={e=>setNewRole(p=>({...p,reports:e.target.value}))} placeholder="Direct supervisor" style={inpStyle} /></div>
           </div>
         </div></Animated>
@@ -384,12 +391,13 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
             <Label>{g.label}</Label>
             {members.map((p, i) => {
               const grade = grades[p.role];
-              const isEditing = editingRole === p.role;
-              const leftColor = p.type === "vacant" ? "#CC5A4A" : grade ? scoreColor(grade.score) : tc[p.type];
+              const isVacant = p.vacant === true || p.type === "vacant";
+              const isEditing = editDraft?._orig === p.role;
+              const leftColor = isVacant ? "#CC5A4A" : grade ? scoreColor(grade.score) : (tc[p.type] || tc.leader);
               return (
                 <div key={i} style={{
-                  background: p.type === "vacant" ? "rgba(242,103,81,0.08)" : isEditing ? "rgba(242,103,81,0.06)" : "var(--surface)",
-                  border: `1px solid ${p.type === "vacant" ? "rgba(204,90,74,0.14)" : isEditing ? "rgba(46,196,182,0.3)" : grade ? `${scoreColor(grade.score)}25` : "var(--border)"}`,
+                  background: isVacant ? "rgba(242,103,81,0.08)" : isEditing ? "rgba(242,103,81,0.06)" : "var(--surface)",
+                  border: `1px solid ${isVacant ? "rgba(204,90,74,0.14)" : isEditing ? "rgba(46,196,182,0.3)" : grade ? `${scoreColor(grade.score)}25` : "var(--border)"}`,
                   borderLeft: `3px solid ${leftColor}`,
                   borderRadius: 10, padding: 16, marginBottom: 8
                 }}>
@@ -399,7 +407,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
                             <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0 }}>{p.name}</p>
-                            {p.type === "vacant" && <Tag color="#CC5A4A">Vacant</Tag>}
+                            {isVacant && <Tag color="#CC5A4A">Vacant</Tag>}
                           </div>
                           <p style={{ fontSize: 10, fontFamily: MONO, color: tc[p.type], margin: "0 0 8px" }}>{p.role}</p>
                           {grade && (
@@ -411,13 +419,12 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
                               <div style={{ width: 80 }}><Bar v={grade.score} color={scoreColor(grade.score)} /></div>
                             </div>
                           )}
-                          {p.type !== "vacant" && (
-                            <button onClick={() => startEdit(p)} style={{ marginTop: 8, background: "none", border: "1px solid var(--border-strong)", borderRadius: 5, color: "var(--text-primary)", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1, cursor: "pointer", padding: "4px 8px" }}>✏ Edit Role</button>
-                          )}
+                          <button onClick={() => startEdit(p)} style={{ marginTop: 8, background: "none", border: "1px solid var(--border-strong)", borderRadius: 5, color: "var(--text-primary)", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1, cursor: "pointer", padding: "4px 8px" }}>✏ Edit Role</button>
                         </div>
                         <div>
-                          <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Owns & Winning</p>
-                          <p style={{ fontSize: 12, color: "var(--text-primary)", margin: 0, lineHeight: 1.6 }}>{p.owns}</p>
+                          <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Owns</p>
+                          <p style={{ fontSize: 12, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.6 }}>{p.owns}</p>
+                          {p.winning && <><p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Winning</p><p style={{ fontSize: 12, color: "var(--text-primary)", margin: 0, lineHeight: 1.6 }}>{p.winning}</p></>}
                         </div>
                         <div>
                           <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 4px" }}>Reports To</p>
@@ -433,17 +440,25 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
                     </div>
                   ) : (
                     <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                        <div>
-                          <p style={{ fontSize: 13, color: "var(--accent)", margin: "0 0 2px", fontFamily: MONO }}>{p.role}</p>
-                          <p style={{ fontSize: 11, color: "var(--text-primary)", margin: 0 }}>Editing ownership and winning definition</p>
-                        </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                        <p style={{ fontSize: 11, fontFamily: MONO, color: "var(--accent)", margin: 0, textTransform: "uppercase", letterSpacing: 1.5 }}>Editing Role</p>
                         <div style={{ display: "flex", gap: 8 }}>
-                          <Btn secondary small onClick={() => setEditingRole(null)}>Cancel</Btn>
-                          <Btn small onClick={() => saveEdit(p.role)}>Save & Clear Grade ✓</Btn>
+                          <Btn danger small onClick={deleteRole}>Delete Role</Btn>
+                          <Btn secondary small onClick={() => setEditDraft(null)}>Cancel</Btn>
+                          <Btn small onClick={saveEdit}>Save ✓</Btn>
                         </div>
                       </div>
-                      <textarea value={editOwns} onChange={e => setEditOwns(e.target.value)} style={ta} />
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 10 }} className="px-grid-2">
+                        <div><Label>Name</Label><input value={editDraft.name} onChange={e => setEditDraft(d => ({...d, name: e.target.value}))} disabled={editDraft.vacant} placeholder={editDraft.vacant ? "(Vacant — no assignee)" : "Full name"} style={{...inpStyle, opacity: editDraft.vacant ? 0.45 : 1}} /></div>
+                        <div style={{ display: "flex", alignItems: "flex-end" }}><label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "9px 0" }}><input type="checkbox" checked={editDraft.vacant || false} onChange={e => setEditDraft(d => ({...d, vacant: e.target.checked, name: e.target.checked ? "" : d.name}))} style={{ accentColor: "#CC5A4A", width: 14, height: 14 }} /><span style={{ fontSize: 10, fontFamily: MONO, color: "#CC5A4A", textTransform: "uppercase", letterSpacing: 1 }}>Vacant</span></label></div>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 10 }} className="px-grid-2">
+                        <div><Label>Role Title</Label><input value={editDraft.role} onChange={e => setEditDraft(d => ({...d, role: e.target.value}))} style={inpStyle} /></div>
+                        <div><Label>Type</Label><select value={editDraft.type} onChange={e => setEditDraft(d => ({...d, type: e.target.value}))} style={{...inpStyle, background: "rgba(16,37,52,0.95)"}}>{["leader","director","coordinator","support","pastor"].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}</select></div>
+                      </div>
+                      <div style={{ marginBottom: 10 }}><Label>Owns</Label><textarea value={editDraft.owns} onChange={e => setEditDraft(d => ({...d, owns: e.target.value}))} placeholder="What this role is responsible for..." style={{...ta, minHeight: 64}} /></div>
+                      <div style={{ marginBottom: 10 }}><Label>Winning Looks Like</Label><textarea value={editDraft.winning} onChange={e => setEditDraft(d => ({...d, winning: e.target.value}))} placeholder="What does success look like in this role..." style={{...ta, minHeight: 64}} /></div>
+                      <div><Label>Reports To</Label><input value={editDraft.reports} onChange={e => setEditDraft(d => ({...d, reports: e.target.value}))} style={inpStyle} /></div>
                     </div>
                   )}
                 </div>
@@ -462,14 +477,14 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
           </div>
           <Btn danger small onClick={async () => {
             onUpdateGaps("diagnosing");
-            const vacants = people.filter(p => p.type === "vacant").map(p => p.role).join(", ") || "None";
+            const vacants = people.filter(p => p.vacant === true || p.type === "vacant").map(p => p.role).join(", ") || "None";
             const overloaded = people.filter(p => p.reports && p.reports.toLowerCase().includes("vacant")).map(p => `${p.name} (${p.role})`).join(", ") || "None";
             const prompt = `You are an organizational clarity expert analyzing a team structure.
 
 Analyze this org chart and identify the real structural pressure points — places where the structure itself is creating friction, risk, or overload.
 
 TEAM:
-${people.map(p => `- ${p.role}: ${p.name} (${p.type}) — Reports to: ${p.reports} — Owns: ${p.owns}`).join("\n")}
+${people.map(p => `- ${p.role}: ${(p.vacant===true||p.type==="vacant") ? "[VACANT]" : p.name} (${p.type}) — Reports to: ${p.reports} — Owns: ${p.owns}${p.winning ? ` | Winning: ${p.winning}` : ""}`).join("\n")}
 
 VACANT ROLES: ${vacants}
 PEOPLE AFFECTED BY VACANCIES: ${overloaded}
@@ -839,7 +854,7 @@ function HealthOverview({ identity, people, gaps, rhythm }) {
 
   const runAnalysis = async () => {
     setLoading(true); setError("");
-    const vacants = people.filter(p => p.type === "vacant").map(p => p.role).join(", ") || "None";
+    const vacants = people.filter(p => p.vacant === true || p.type === "vacant").map(p => p.role).join(", ") || "None";
     const prompt = `You are Perspexis, an AI-powered organizational health assessment system. Analyze this organization using the Perspexis Organizational Health Index (POHI) — a proprietary 6-dimension framework.
 
 ORGANIZATION DATA:
@@ -1561,8 +1576,8 @@ function PerspexisCore() {
     await logActivity("Rhythm layer saved", "rhythm");
   };
 
-  const updateRole = (role, owns) => {
-    const updated = people.map(r => r.role === role ? { ...r, owns } : r);
+  const updateRole = (oldRole, updatedRoleObj) => {
+    const updated = people.map(r => r.role === oldRole ? { ...updatedRoleObj } : r);
     savePeople(updated, gaps);
   };
 
