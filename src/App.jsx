@@ -1442,8 +1442,8 @@ function PerspexisLogo() {
     >
       {/* Coral rounded diamond */}
       <rect
-        x="172" y="132" width="56" height="56" rx="12"
-        transform="rotate(45 200 160)"
+        x="180" y="149" width="40" height="40" rx="8"
+        transform="rotate(45 200 169)"
         fill="#E8574A"
       />
 
