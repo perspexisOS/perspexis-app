@@ -93,40 +93,25 @@ function IdentityView({ data, onEdit }) {
       </div>
       <Animated delay={0}><Card accent>
         <Label>Mission</Label>
+        <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 10px", lineHeight: 1.55 }}>Why your organization exists — the thing you're always striving toward but will never fully achieve.</p>
         <p style={{ fontSize: 16, lineHeight: 1.9, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{data.mission}</p>
       </Card></Animated>
-      <Animated delay={60}><Card>
-        <Label>Guiding Statement — The Discipleship Pipeline</Label>
-        <p style={{ fontSize: 14, lineHeight: 1.8, color: "var(--text-primary)", margin: "0 0 14px", fontFamily: DISPLAY }}>{data.guiding}</p>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {["Encounter", "Freedom", "His Word", "Demonstration"].map((s, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ padding: "5px 14px", borderRadius: 3, background: "var(--accent-dim)", border: "1px solid var(--accent-border)", color: "var(--accent)", fontSize: 9, fontFamily: MONO, letterSpacing: 1.5 }}>{s}</span>
-              {i < 3 && <span style={{ color: "var(--text-primary)" }}>→</span>}
-            </div>
-          ))}
-        </div>
-      </Card></Animated>
-      <Animated delay={120}><div className="px-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 20 }}>
+
+      <Animated delay={60}><div className="px-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, padding: 20 }}>
           <Label>North Star Vision</Label>
+          <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 10px", lineHeight: 1.55 }}>Where is your organization ultimately headed? Your long-term picture of the future.</p>
           <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{data.vision_north}</p>
         </div>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 20 }}>
-          <Label>Phase 1 — By 2030</Label>
-          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--text-primary)", margin: "0 0 14px", fontFamily: DISPLAY }}>{data.vision_phase}</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {[["2", "Locations"], ["300+", "Per Campus"], ["$1.44M", "Annual Giving"], ["2030", "Target"]].map(([n, l]) => (
-              <div key={l} style={{ textAlign: "center", padding: 8, background: "var(--accent-dim)", borderRadius: 4, border: "1px solid var(--accent-border)" }}>
-                <p style={{ fontSize: 18, fontFamily: MONO, color: "var(--accent)", margin: "0 0 2px", fontWeight: 500 }}>{n}</p>
-                <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", margin: 0, textTransform: "uppercase", letterSpacing: 1.5 }}>{l}</p>
-              </div>
-            ))}
-          </div>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, padding: 20 }}>
+          <Label>Phase 1 Vision</Label>
+          <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 10px", lineHeight: 1.55 }}>What does success look like in your next major chapter? A specific timeframe with measurable outcomes.</p>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{data.vision_phase}</p>
         </div>
       </div></Animated>
       <Animated delay={180}>
         <Label>Core Values</Label>
+        <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 10px", lineHeight: 1.55 }}>The non-negotiable principles that guide how your team makes decisions and operates.</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }} className="px-grid-2">
           {data.values.map((v, i) => (
             <Animated key={i} delay={180 + i * 40}>
@@ -140,6 +125,7 @@ function IdentityView({ data, onEdit }) {
       </Animated>
       <Animated delay={280}><Card accent>
         <Label>Positioning Statement</Label>
+        <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 10px", lineHeight: 1.55 }}>Who do you serve, what do you uniquely offer, and why would someone choose you over the alternatives?</p>
         <p style={{ fontSize: 14, lineHeight: 1.9, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{data.positioning}</p>
       </Card></Animated>
     </div>
@@ -170,14 +156,21 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
         </div>
       </div>
 
-      {[["Mission", "mission", 80], ["Guiding Statement", "guiding", 80], ["North Star Vision", "vision_north", 80], ["Phase 1 Vision", "vision_phase", 100], ["Positioning Statement", "positioning", 120]].map(([label, key, h]) => (
+      {[
+        ["Mission", "mission", 80, "Why does your organization exist? The thing you're always striving toward but will never fully achieve."],
+        ["North Star Vision", "vision_north", 80, "Where is your organization ultimately headed? Your long-term picture of the future, 10–20 years out."],
+        ["Phase 1 Vision", "vision_phase", 100, "What does success look like in your next major chapter? Set a specific timeframe and measurable outcomes."],
+        ["Positioning Statement", "positioning", 120, "Who do you serve, what do you uniquely offer, and why would someone choose you over the alternatives?"],
+      ].map(([label, key, h, explainer]) => (
         <div key={key} style={{ marginBottom: 18 }}>
           <Label>{label}</Label>
-          <textarea value={d[key]} onChange={e => set(key, e.target.value)} style={{ ...ta, minHeight: h }} />
+          <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 8px", lineHeight: 1.55 }}>{explainer}</p>
+          <textarea value={d[key] || ""} onChange={e => set(key, e.target.value)} style={{ ...ta, minHeight: h }} />
         </div>
       ))}
 
       <Label>Core Values</Label>
+      <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 12px", lineHeight: 1.55 }}>The non-negotiable principles that guide how your team makes decisions and operates.</p>
       {d.values.map((v, i) => (
         <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 14, marginBottom: 10 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }} className="px-grid-2">
@@ -2097,7 +2090,7 @@ function PerspexisCore() {
         supabase.from("rhythm").select("*").eq("user_id", oid).single(),
       ]);
       if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOnboarded(true); if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0); }
-      if (identityRes.data) { setIdentity({ mission: identityRes.data.mission, guiding: identityRes.data.guiding, vision_north: identityRes.data.vision_north, vision_phase: identityRes.data.vision_phase, values: identityRes.data.values, positioning: identityRes.data.positioning }); setIdentityMode("view"); }
+      if (identityRes.data) { setIdentity({ mission: identityRes.data.mission, vision_north: identityRes.data.vision_north, vision_phase: identityRes.data.vision_phase, values: identityRes.data.values, positioning: identityRes.data.positioning }); setIdentityMode("view"); }
       if (peopleRes.data?.roles) { setPeople(peopleRes.data.roles); setGaps(peopleRes.data.gaps || ""); }
       if (rhythmRes.data) { setRhythm({ current: rhythmRes.data.current_state, cadences: rhythmRes.data.cadences, breaks: rhythmRes.data.breaks }); setRhythmMode("view"); }
       setDataLoading(false);
@@ -2372,7 +2365,7 @@ function PerspexisCore() {
               {l.id === "health" && <HealthOverview identity={identity} people={people} gaps={gaps} rhythm={rhythm} />}
               {l.id === "identity" && (
                 identityMode === "edit" || identityMode === "setup"
-                  ? <IdentityEdit data={identity || {mission:"",guiding:"",vision_north:"",vision_phase:"",values:[{name:"",desc:""},{name:"",desc:""},{name:"",desc:""},{name:"",desc:""}],positioning:""}} onSave={saveIdentity} onCancel={() => identity && setIdentityMode("view")} isSetup={!identity} />
+                  ? <IdentityEdit data={identity || {mission:"",vision_north:"",vision_phase:"",values:[{name:"",desc:""},{name:"",desc:""},{name:"",desc:""},{name:"",desc:""}],positioning:""}} onSave={saveIdentity} onCancel={() => identity && setIdentityMode("view")} isSetup={!identity} />
                   : <IdentityView data={identity} onEdit={() => setIdentityMode("edit")} />
               )}
               {l.id === "people" && (
