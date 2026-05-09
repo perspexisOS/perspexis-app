@@ -2019,6 +2019,7 @@ function PerspexisCore() {
   // ── Beta whitelist check ─────────────────────────────────────────────────
   const BETA_EMAILS = [
     // Cody
+    "clkillian89@gmail.com",
     "info@kingdomhousechurch.org",
     // Levi
     "levikillian@appalachianland.com",
