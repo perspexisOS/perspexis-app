@@ -2238,7 +2238,7 @@ function MavenChat({ user, orgName, orgType, identity, people, gaps, rhythm, act
 
       {/* Chat panel */}
       {open && (
-        <div style={{ position: 'fixed', bottom: 0, right: 0, width: 400, height: '100vh', background: '#0B1E2E', borderLeft: '1px solid var(--border)', zIndex: 599} className='px-maven-panel', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.4)', animation: 'fadeUp 0.25s ease both' }}>
+        <div className="px-maven-panel" style={{ position: 'fixed', bottom: 0, right: 0, width: 400, height: '100vh', background: '#0B1E2E', borderLeft: '1px solid var(--border)', zIndex: 599, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.4)', animation: 'fadeUp 0.25s ease both' }}>
           {/* Header */}
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'rgba(16,37,52,0.8)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
