@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://mtjthyjyzlfjmxefgqnq.supabase.co";
@@ -133,15 +133,31 @@ function IdentityView({ data, onEdit }) {
 }
 
 // ─── Identity Edit ─────────────────────────────────────────────────────────────
-function IdentityEdit({ data, onSave, onCancel, isSetup }) {
+function IdentityEdit({ data, onSave, onCancel, isSetup, orgName, orgType, onMavenApply }) {
   const [d, setD] = useState({ ...data, values: data.values.map(v => ({ ...v })) });
   const set = (k, v) => setD(p => ({ ...p, [k]: v }));
   const setVal = (i, k, v) => setD(p => ({ ...p, values: p.values.map((val, idx) => idx === i ? { ...val, [k]: v } : val) }));
   const ta = { width: "100%", padding: "11px 13px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" };
   const inp = { ...ta, minHeight: "auto", resize: "none" };
   const canSave = d.mission.trim().length > 5;
+  const [showMaven, setShowMaven] = useState(false);
+
+  const applyMaven = (drafts) => {
+    setD(prev => ({
+      ...prev,
+      ...(drafts.mission ? { mission: drafts.mission } : {}),
+      ...(drafts.vision_north ? { vision_north: drafts.vision_north } : {}),
+      ...(drafts.vision_phase ? { vision_phase: drafts.vision_phase } : {}),
+      ...(drafts.values && Array.isArray(drafts.values) && drafts.values.length > 0 ? { values: drafts.values } : {}),
+      ...(drafts.positioning ? { positioning: drafts.positioning } : {}),
+    }));
+    setShowMaven(false);
+    if (onMavenApply) onMavenApply(drafts);
+  };
 
   return (
+    <>
+    {showMaven && <MavenPanel identity={d} orgName={orgName} orgType={orgType} onApply={applyMaven} onClose={() => setShowMaven(false)} />}
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
@@ -151,6 +167,7 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
           {isSetup && <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0, fontFamily: DISPLAY }}>This is the foundation of your operating system. Fill in what you know — you can refine it anytime.</p>}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <Btn secondary small onClick={() => setShowMaven(true)} style={{ background: "rgba(242,103,81,0.1)", border: "1px solid var(--accent-border)", color: "var(--accent)" }}>✦ Ask Maven</Btn>
           {onCancel && <Btn secondary small onClick={onCancel}>Cancel</Btn>}
           <Btn small onClick={() => onSave(d)} disabled={!canSave}>{isSetup ? "Save & Continue →" : "Save Changes ✓"}</Btn>
         </div>
@@ -186,6 +203,7 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
         </div>
       ))}
     </div>
+  </>
   );
 }
 
@@ -203,7 +221,7 @@ function EmptyPeopleState({ onAdd }) {
   );
 }
 
-function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRemoveRole }) {
+function PeopleView({ people, gaps, orgName, orgType, identity, onUpdateRole, onUpdateGaps, onAddRole, onRemoveRole }) {
   const tc = { pastor: "#F26751", support: "#A87EC8", director: "var(--accent)", leader: "var(--accent)", vacant: "#CC5A4A", coordinator: "#7EB8C8" };
   const [grades, setGrades] = useState({});
   const [grading, setGrading] = useState(false);
@@ -224,9 +242,9 @@ function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRem
   const gradePeople = async () => {
     setGrading(true); setGradeError("");
     const gradeable = people.filter(p => !(p.vacant === true || p.type === "vacant"));
-    const prompt = `You are an organizational clarity expert grading role definitions for a business operating system.
+    const prompt = `You are an organizational clarity expert grading role definitions for ${orgName || "an organization"} (${orgType || "Organization"}) in a business operating system.
 
-Grade each role 0-100 on: specificity of ownership, clarity of what winning looks like, and appropriateness of scope.
+Grade each role 0-100 on: specificity of ownership, clarity of what winning looks like, and appropriateness of scope. Reference what's typical and healthy for a ${orgType || "organization"} — use real benchmarks from high-performing ${orgType || "organizations"} in your feedback.
 
 Roles:
 ${gradeable.map((p, i) => `${i + 1}. ${p.role} (${p.name})\n   Owns: "${p.owns}"${p.winning ? `\n   Winning looks like: "${p.winning}"` : ""}\n   Reports to: ${p.reports}`).join("\n")}
@@ -251,9 +269,9 @@ Return ONLY a raw JSON array, no markdown, no backticks:
     const overloaded = people.filter(p => p.reports && p.reports.includes("vacant")).map(p => p.name).join(", ");
     const prompt = `You are an expert organizational consultant analyzing a team structure for a business operating system called Perspexis.
 
-ORGANIZATION: Kingdom House (Church Plant, Concord NC)
-FOUNDING PASTOR: Cody Killian (only paid staff, part-time)
-TOTAL TEAM: ${people.length} people (1 paid, rest volunteers)
+ORGANIZATION: ${orgName || "This organization"} (${orgType || "Organization"})
+INDUSTRY CONTEXT: Reference real benchmarks, typical patterns, and known challenges for a ${orgType || "organization"} in your analysis.
+TEAM SIZE: ${people.length} people
 
 STRUCTURAL PRESSURE POINTS:
 ${gaps}
@@ -581,7 +599,7 @@ function RhythmSetup({ onDone }) {
   );
 }
 
-function RhythmView({ data, onUpdate }) {
+function RhythmView({ data, orgName, orgType, onUpdate }) {
   const [cadences, setCadences] = useState(data.cadences);
   const [editingIdx, setEditingIdx] = useState(null);
   const [editDraft, setEditDraft] = useState({});
@@ -626,7 +644,9 @@ function RhythmView({ data, onUpdate }) {
 
   const gradeRhythm = async () => {
     setGrading(true); setGradeError("");
-    const prompt = `You are an organizational rhythm expert grading meeting cadences for a business operating system.
+    const prompt = `You are an organizational rhythm expert grading meeting cadences for ${orgName || "an organization"} (${orgType || "Organization"}).
+
+INDUSTRY CONTEXT: Reference real benchmarks and patterns for a ${orgType || "organization"} — what cadences are typical, what's too frequent or too sparse for this type of org.
 
 Grade each cadence 0-100 based on:
 - Frequency appropriateness for its stated purpose
@@ -839,7 +859,7 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
 }
 
 // ─── Health Overview (POHI) ────────────────────────────────────────────────────
-function HealthOverview({ identity, people, gaps, rhythm }) {
+function HealthOverview({ identity, people, gaps, rhythm, orgName, orgType }) {
   const [pohi, setPohi] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -849,6 +869,9 @@ function HealthOverview({ identity, people, gaps, rhythm }) {
     setLoading(true); setError("");
     const vacants = people.filter(p => p.vacant === true || p.type === "vacant").map(p => p.role).join(", ") || "None";
     const prompt = `You are Perspexis, an AI-powered organizational health assessment system. Analyze this organization using the Perspexis Organizational Health Index (POHI) — a proprietary 6-dimension framework.
+
+ORGANIZATION TYPE: ${orgType || "Organization"}
+INDUSTRY BENCHMARKING: Score relative to what healthy ${orgType || "organizations"} typically look like at comparable stages. Reference real industry patterns, benchmarks, and known characteristics of high-performing ${orgType || "organizations"} in each dimension.
 
 ORGANIZATION DATA:
 Mission: "${identity.mission}"
@@ -1795,6 +1818,224 @@ function SettingsPage({ user, orgOwnerId, orgName, onClose }) {
   );
 }
 
+
+// ─── Maven — Organizational Clarity Coach ────────────────────────────────────
+function MavenPanel({ identity, orgName, orgType, onApply, onClose }) {
+  const FIELDS = [
+    { key: "mission",       label: "Mission",              emoji: "🎯", desc: "Why you exist",                  q: "What problem is so persistent and important that you built an entire organization around solving it? What changes in the world because of what you do?" },
+    { key: "vision_north",  label: "North Star Vision",    emoji: "⭐", desc: "Long-term destination",          q: "If your organization was wildly successful 20 years from now — what would the world look like? Paint me a picture of the future you're building toward." },
+    { key: "vision_phase",  label: "Phase 1 Vision",       emoji: "🏁", desc: "Near-term milestones",           q: "In the next 1–3 years, what would need to be true for you to look back and say 'we crushed it'? Give me specifics — numbers, milestones, things you could point to." },
+    { key: "values",        label: "Core Values",          emoji: "🧭", desc: "Non-negotiable principles",      q: "Tell me about a moment on your team where you thought 'that's exactly who we are.' What principles were at work in that moment?" },
+    { key: "positioning",   label: "Positioning Statement",emoji: "🎪", desc: "Who you serve & why you're different", q: "Who is your ideal customer or member — be specific. And if they were explaining you to a friend, why would they say they chose you over anyone else?" },
+  ];
+
+  const [phase, setPhase] = useState("discovery");
+  const [haveSet, setHaveSet] = useState(new Set(
+    FIELDS.filter(f => f.key === "values"
+      ? identity?.values?.some(v => v.name?.trim())
+      : identity?.[f.key]?.trim()
+    ).map(f => f.key)
+  ));
+  const [queue, setQueue] = useState([]);
+  const [qIdx, setQIdx] = useState(0);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [drafts, setDrafts] = useState({});
+  const [draftVisible, setDraftVisible] = useState(false);
+  const bottomRef = useRef(null);
+
+  const currentField = queue[qIdx];
+  const mavenBubble = { background: "rgba(242,103,81,0.08)", border: "1px solid rgba(242,103,81,0.2)", borderRadius: "4px 14px 14px 14px", padding: "12px 16px", maxWidth: "80%" };
+  const userBubble  = { background: "rgba(110,231,216,0.08)", border: "1px solid rgba(110,231,216,0.15)", borderRadius: "14px 4px 14px 14px", padding: "12px 16px", maxWidth: "80%", marginLeft: "auto" };
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  const toggle = (key) => setHaveSet(p => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; });
+
+  const proceed = async () => {
+    const missing = FIELDS.filter(f => !haveSet.has(f.key));
+    if (missing.length === 0) { onClose(); return; }
+    setQueue(missing); setQIdx(0); setPhase("coaching"); setMessages([]); setDraftVisible(false);
+    await askOpening(missing[0]);
+  };
+
+  const askOpening = async (field) => {
+    setLoading(true);
+    const r = await callClaude(`You are Maven, an organizational clarity coach inside Perspexis. Help leaders discover their organizational identity through honest conversation.
+
+Coaching ${orgName || "this organization"} (${orgType || "Organization"}) on their ${field.label} — ${field.desc}.
+
+Ask your opening question. Warm, direct, conversational. Adapt naturally for a ${orgType || "organization"}. One or two sentences max. Just the question, no preamble.
+
+Base question: ${field.q}`);
+    setMessages([{ role: "maven", text: r }]);
+    setLoading(false);
+  };
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: "user", text: input.trim() };
+    const newMsgs = [...messages, userMsg];
+    setMessages(newMsgs); setInput(""); setLoading(true);
+    const turns = newMsgs.filter(m => m.role === "user").length;
+    if (turns >= 2 && !draftVisible) { await generateDraft(newMsgs); }
+    else if (draftVisible) { await refineDraft(newMsgs); }
+    else { await followUp(newMsgs); }
+  };
+
+  const hist = (msgs) => msgs.map(m => `${m.role === "maven" ? "Maven" : "Them"}: ${m.text}`).join("\n\n");
+
+  const followUp = async (msgs) => {
+    const r = await callClaude(`You are Maven coaching ${orgName || "this org"} on their ${currentField?.label}.\n\nConversation:\n${hist(msgs)}\n\nAsk one focused follow-up question. Keep it short — just the question.`);
+    setMessages(p => [...p, { role: "maven", text: r }]); setLoading(false);
+  };
+
+  const generateDraft = async (msgs) => {
+    const context = msgs.filter(m => m.role === "user").map(m => m.text).join(" | ");
+    const isValues = currentField?.key === "values";
+    const prompt = isValues
+      ? `Based on this conversation, identify 3–5 core values for ${orgName || "this organization"} (${orgType || "Organization"}).\n\nWhat they shared: ${context}\n\nFormat each as: VALUE NAME: one-sentence description.\nList only, no preamble.`
+      : `Based on this conversation, write a ${currentField?.label} for ${orgName || "this organization"} (${orgType || "Organization"}).\n\nWhat they shared: ${context}\n\nRequirements: specific and genuine, 1–3 sentences, in their voice. Write only the ${currentField?.label} text.`;
+    const draft = await callClaude(prompt);
+    setDrafts(p => ({ ...p, [currentField.key]: draft }));
+    setMessages(p => [...p, { role: "maven", text: `Here's a draft based on what you've shared:\n\n"${draft}"\n\nDoes this feel right? Tell me what to adjust, or click Use This to move on.` }]);
+    setDraftVisible(true); setLoading(false);
+  };
+
+  const refineDraft = async (msgs) => {
+    const feedback = msgs[msgs.length - 1].text;
+    const old = drafts[currentField?.key] || "";
+    const newDraft = await callClaude(`Refine this ${currentField?.label}:\nCurrent: "${old}"\nFeedback: "${feedback}"\nWrite the improved version only.`);
+    setDrafts(p => ({ ...p, [currentField.key]: newDraft }));
+    setMessages(p => [...p, { role: "maven", text: `Revised:\n\n"${newDraft}"\n\nBetter? Click Use This when ready.` }]);
+    setLoading(false);
+  };
+
+  const useThisDraft = () => {
+    if (qIdx + 1 < queue.length) { setQIdx(i => i + 1); setDraftVisible(false); setMessages([]); askOpening(queue[qIdx + 1]); }
+    else { setPhase("review"); }
+  };
+
+  const applyAll = () => {
+    const applied = { ...drafts };
+    if (typeof applied.values === "string") {
+      const parsed = applied.values.split("\n").filter(l => l.trim()).map(l => {
+        const clean = l.replace(/^\d+\.\s*/, "");
+        const idx = clean.indexOf(":");
+        return idx > 0 ? { name: clean.slice(0, idx).trim(), desc: clean.slice(idx + 1).trim() } : { name: clean.trim(), desc: "" };
+      }).filter(v => v.name);
+      if (parsed.length > 0) applied.values = parsed;
+    }
+    onApply(applied);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#071827", zIndex: 500, display: "flex", flexDirection: "column", fontFamily: DISPLAY }}>
+      {/* Nav bar */}
+      <div style={{ padding: "14px 28px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(16,37,52,0.9)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(242,103,81,0.15)", border: "1px solid var(--accent-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✦</div>
+          <div>
+            <p style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Maven</p>
+            <p style={{ fontFamily: MONO, fontSize: 9, color: "var(--accent)", margin: 0, textTransform: "uppercase", letterSpacing: 1.5 }}>Organizational Clarity Coach</p>
+          </div>
+        </div>
+        <button onClick={onClose} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 5, color: "var(--text-secondary)", cursor: "pointer", padding: "5px 14px", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1 }}>← Back to Form</button>
+      </div>
+
+      {/* ── Discovery ── */}
+      {phase === "discovery" && (
+        <div style={{ flex: 1, overflowY: "auto", padding: "40px 24px", maxWidth: 620, margin: "0 auto", width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <p style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 10px" }}>Hi, I'm Maven 👋</p>
+            <p style={{ fontFamily: BODY, fontSize: 14, color: "var(--text-secondary)", margin: 0, lineHeight: 1.75 }}>I'm here to help you discover and articulate your organizational identity. Let's start with what you already have.</p>
+          </div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 28, marginBottom: 24 }}>
+            <Label>Which of these do you already have? (select all that apply)</Label>
+            <p style={{ fontFamily: BODY, fontSize: 12, color: "var(--text-secondary)", margin: "0 0 18px", lineHeight: 1.55 }}>For anything you select, you'll enter it directly. For what's left, I'll help you work through it conversationally.</p>
+            {FIELDS.map(f => (
+              <button key={f.key} onClick={() => toggle(f.key)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: haveSet.has(f.key) ? "rgba(242,103,81,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${haveSet.has(f.key) ? "var(--accent-border)" : "var(--border)"}`, borderRadius: 8, cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: haveSet.has(f.key) ? "var(--accent)" : "transparent", border: `2px solid ${haveSet.has(f.key) ? "var(--accent)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {haveSet.has(f.key) && <span style={{ color: "#071827", fontSize: 11, fontWeight: 700 }}>✓</span>}
+                </div>
+                <div>
+                  <p style={{ fontFamily: DISPLAY, fontSize: 13, fontWeight: 600, color: haveSet.has(f.key) ? "var(--accent)" : "var(--text-primary)", margin: "0 0 2px" }}>{f.emoji} {f.label}</p>
+                  <p style={{ fontFamily: BODY, fontSize: 11, color: "var(--text-secondary)", margin: 0 }}>{f.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+            <Btn secondary small onClick={onClose}>Enter Everything Manually</Btn>
+            <Btn onClick={proceed}>{FIELDS.filter(f => !haveSet.has(f.key)).length === 0 ? "All set — continue →" : `Let's Build ${FIELDS.filter(f => !haveSet.has(f.key)).length} Element${FIELDS.filter(f => !haveSet.has(f.key)).length > 1 ? "s" : ""} Together →`}</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* ── Coaching ── */}
+      {phase === "coaching" && currentField && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 700, margin: "0 auto", width: "100%" }}>
+          <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <p style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1.5, margin: 0 }}>{currentField.emoji} {currentField.label} · {qIdx + 1} of {queue.length}</p>
+              <p style={{ fontFamily: MONO, fontSize: 9, color: "var(--text-secondary)", margin: 0, textTransform: "uppercase", letterSpacing: 1 }}>{currentField.desc}</p>
+            </div>
+            <div style={{ height: 3, background: "var(--border)", borderRadius: 2 }}>
+              <div style={{ width: `${((qIdx + (draftVisible ? 1 : 0.5)) / queue.length) * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 2, transition: "width 0.4s" }} />
+            </div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: 14 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "maven" ? "flex-start" : "flex-end" }}>
+                {m.role === "maven" && <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 5px" }}>✦ Maven</p>}
+                <div style={m.role === "maven" ? mavenBubble : userBubble}>
+                  <p style={{ fontSize: 13, fontFamily: BODY, color: "var(--text-primary)", margin: 0, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{m.text}</p>
+                </div>
+              </div>
+            ))}
+            {loading && <div><p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 5px" }}>✦ Maven</p><div style={mavenBubble}><div style={{ display: "flex", gap: 5 }}>{[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", animation: `arcFade 1.2s ease ${i*0.2}s infinite` }} />)}</div></div></div>}
+            <div ref={bottomRef} />
+          </div>
+
+          <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", flexShrink: 0, background: "rgba(16,37,52,0.7)" }}>
+            {draftVisible && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}><Btn small onClick={useThisDraft}>{qIdx + 1 < queue.length ? "Use This → Next Element" : "Use This → Review All"}</Btn></div>}
+            <div style={{ display: "flex", gap: 10 }}>
+              <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Type your response… (Enter to send)" rows={2} style={{ flex: 1, padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", resize: "none" }} />
+              <button onClick={send} disabled={loading || !input.trim()} style={{ padding: "10px 18px", background: input.trim() && !loading ? "var(--accent)" : "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, color: input.trim() && !loading ? "#071827" : "var(--text-secondary)", fontFamily: DISPLAY, fontSize: 11, fontWeight: 700, cursor: input.trim() && !loading ? "pointer" : "default" }}>Send →</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Review ── */}
+      {phase === "review" && (
+        <div style={{ flex: 1, overflowY: "auto", padding: "40px 24px", maxWidth: 620, margin: "0 auto", width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>✦</div>
+            <p style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px" }}>Here's what we discovered together</p>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.65 }}>Review the drafts below. Click "Apply to Identity Form" to populate your fields — you can still edit from there.</p>
+          </div>
+          {Object.entries(drafts).map(([key, value]) => {
+            const f = FIELDS.find(f => f.key === key);
+            return f ? (
+              <div key={key} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: "3px solid var(--accent)", borderRadius: 8, padding: 20, marginBottom: 14 }}>
+                <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 8px" }}>{f.emoji} {f.label}</p>
+                <p style={{ fontSize: 13, color: "var(--text-primary)", fontFamily: BODY, margin: 0, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{typeof value === "string" ? value : Array.isArray(value) ? value.map(v => `${v.name}: ${v.desc}`).join("\n") : JSON.stringify(value)}</p>
+              </div>
+            ) : null;
+          })}
+          <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 28 }}>
+            <Btn secondary small onClick={onClose}>Close Without Applying</Btn>
+            <Btn onClick={applyAll}>Apply to Identity Form →</Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Stripe Pricing Tiers ───────────────────────────────────────────────────
 // Setup: stripe.com → Products → create Core, Growth, Scale with trial periods
 // → Payment Links → replace stripeMonthly / stripeAnnual URLs below
@@ -2040,6 +2281,7 @@ function PerspexisCore() {
   const [authLoading, setAuthLoading] = useState(true);
   const [onboarded, setOnboarded] = useState(false);
   const [orgName, setOrgName] = useState("");
+  const [orgType, setOrgType] = useState("");
   const [active, setActive] = useState("identity");
   const [identity, setIdentity] = useState(DEFAULT_IDENTITY);
   const [identityMode, setIdentityMode] = useState("setup");
@@ -2089,7 +2331,7 @@ function PerspexisCore() {
         supabase.from("people").select("*").eq("user_id", oid).single(),
         supabase.from("rhythm").select("*").eq("user_id", oid).single(),
       ]);
-      if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOnboarded(true); if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0); }
+      if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOrgType(profileRes.data.org_type || ""); setOnboarded(true); if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0); }
       if (identityRes.data) { setIdentity({ mission: identityRes.data.mission, vision_north: identityRes.data.vision_north, vision_phase: identityRes.data.vision_phase, values: identityRes.data.values, positioning: identityRes.data.positioning }); setIdentityMode("view"); }
       if (peopleRes.data?.roles) { setPeople(peopleRes.data.roles); setGaps(peopleRes.data.gaps || ""); }
       if (rhythmRes.data) { setRhythm({ current: rhythmRes.data.current_state, cadences: rhythmRes.data.cadences, breaks: rhythmRes.data.breaks }); setRhythmMode("view"); }
@@ -2112,7 +2354,7 @@ function PerspexisCore() {
   };
 
   const saveOnboarding = async (name, type) => {
-    setOrgName(name); setOnboarded(true); setIdentityMode("setup");
+    setOrgName(name); setOrgType(type || ""); setOnboarded(true); setIdentityMode("setup");
     await supabase.from("profiles").upsert({ id: user.id, org_name: name, org_type: type }, { onConflict: "id" });
     await logActivity("Onboarding completed", "onboarding", `${name} (${type})`);
     if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0);
@@ -2362,19 +2604,19 @@ function PerspexisCore() {
                 <p style={{ color: "var(--text-primary)", fontSize: 13, margin: 0, fontFamily: DISPLAY, opacity: 0.7 }}>{l.id === "health" ? "Perspexis Organizational Health Index — a proprietary 6-dimension assessment" : l.desc}</p>
               </div>
 
-              {l.id === "health" && <HealthOverview identity={identity} people={people} gaps={gaps} rhythm={rhythm} />}
+              {l.id === "health" && <HealthOverview identity={identity} people={people} gaps={gaps} rhythm={rhythm} orgName={orgName} orgType={orgType} />}
               {l.id === "identity" && (
                 identityMode === "edit" || identityMode === "setup"
-                  ? <IdentityEdit data={identity || {mission:"",vision_north:"",vision_phase:"",values:[{name:"",desc:""},{name:"",desc:""},{name:"",desc:""},{name:"",desc:""}],positioning:""}} onSave={saveIdentity} onCancel={() => identity && setIdentityMode("view")} isSetup={!identity} />
+                  ? <IdentityEdit data={identity || {mission:"",vision_north:"",vision_phase:"",values:[{name:"",desc:""},{name:"",desc:""},{name:"",desc:""},{name:"",desc:""}],positioning:""}} onSave={saveIdentity} onCancel={() => identity && setIdentityMode("view")} isSetup={!identity} orgName={orgName} orgType={orgType} onMavenApply={d => { setIdentity(prev => ({ ...prev || {mission:"",vision_north:"",vision_phase:"",values:[],positioning:""}, ...d })); }} />
                   : <IdentityView data={identity} onEdit={() => setIdentityMode("edit")} />
               )}
               {l.id === "people" && (
                 people.length === 0 && !peopleStarted
                   ? <EmptyPeopleState onAdd={() => setPeopleStarted(true)} />
-                  : <PeopleView people={people} gaps={gaps} onUpdateRole={updateRole} onUpdateGaps={updateGaps} onAddRole={addRole} onRemoveRole={removeRole} />
+                  : <PeopleView people={people} gaps={gaps} orgName={orgName} orgType={orgType} identity={identity} onUpdateRole={updateRole} onUpdateGaps={updateGaps} onAddRole={addRole} onRemoveRole={removeRole} />
               )}
               {l.id === "rhythm" && (rhythm && rhythmMode === "view"
-                ? <RhythmView data={rhythm} onUpdate={updateRhythm} />
+                ? <RhythmView data={rhythm} orgName={orgName} orgType={orgType} onUpdate={updateRhythm} />
                 : <RhythmSetup onDone={d => { saveRhythm(d); }} />
               )}
             </div>
