@@ -1240,6 +1240,392 @@ function TeamPanel({ user, orgOwnerId, orgName, onClose }) {
   );
 }
 
+
+// ─── Permissions Config ───────────────────────────────────────────────────────
+const PERMISSIONS_CONFIG = [
+  { section: "Identity Layer", key: "identity", actions: [{ key: "view", label: "View" }, { key: "edit", label: "Edit" }] },
+  { section: "People Layer",   key: "people",   actions: [{ key: "view", label: "View" }, { key: "edit", label: "Edit Roles" }, { key: "delete", label: "Delete Roles" }] },
+  { section: "Rhythm Layer",   key: "rhythm",   actions: [{ key: "view", label: "View" }, { key: "edit", label: "Edit Cadences" }] },
+  { section: "Health / POHI",  key: "health",   actions: [{ key: "view", label: "View" }, { key: "analyze", label: "Run Analysis" }] },
+  { section: "AI Features",    key: "ai",       actions: [{ key: "grade", label: "Grade Layers" }, { key: "recommend", label: "Recommendations" }, { key: "diagnose", label: "Diagnose Gaps" }] },
+  { section: "Team Management",key: "team",     actions: [{ key: "view", label: "View Team" }, { key: "invite", label: "Invite Users" }, { key: "revoke", label: "Revoke Access" }] },
+];
+const DEFAULT_PERMISSIONS = {
+  member: { identity:{view:true,edit:false}, people:{view:true,edit:false,delete:false}, rhythm:{view:true,edit:false}, health:{view:true,analyze:false}, ai:{grade:false,recommend:false,diagnose:false}, team:{view:false,invite:false,revoke:false} },
+  admin:  { identity:{view:true,edit:true},  people:{view:true,edit:true,delete:true},   rhythm:{view:true,edit:true},  health:{view:true,analyze:true},  ai:{grade:true,recommend:true,diagnose:true},   team:{view:true,invite:true,revoke:true} },
+};
+
+// ─── Permissions Modal ────────────────────────────────────────────────────────
+function PermissionsModal({ member, onSave, onClose }) {
+  const [perms, setPerms] = useState(() => {
+    if (member.permissions && Object.keys(member.permissions).length > 0) return member.permissions;
+    return DEFAULT_PERMISSIONS[member.role] || DEFAULT_PERMISSIONS.member;
+  });
+  const toggle = (section, action) => setPerms(p => ({ ...p, [section]: { ...p[section], [action]: !p[section]?.[action] } }));
+  const setAll = (section, val) => setPerms(p => { const actions = {}; PERMISSIONS_CONFIG.find(c => c.key === section)?.actions.forEach(a => { actions[a.key] = val; }); return { ...p, [section]: actions }; });
+  const inp = { border: "none", padding: 0, margin: 0, cursor: "pointer" };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(7,24,39,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400, backdropFilter: "blur(4px)" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 14, padding: "32px 36px", maxWidth: 540, width: "92%", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <h3 style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px" }}>Manage Permissions</h3>
+            <p style={{ fontFamily: MONO, fontSize: 11, color: "var(--text-secondary)", margin: 0 }}>{member.email}</p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn secondary small onClick={() => setPerms(DEFAULT_PERMISSIONS.member)}>Reset to Member</Btn>
+            <Btn secondary small onClick={() => setPerms(DEFAULT_PERMISSIONS.admin)}>Set to Admin</Btn>
+          </div>
+        </div>
+        {PERMISSIONS_CONFIG.map(section => (
+          <div key={section.key} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <Label>{section.section}</Label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setAll(section.key, true)} style={{ ...inp, fontSize: 9, fontFamily: MONO, color: "var(--teal)", textTransform: "uppercase", letterSpacing: 1, background: "none" }}>All</button>
+                <button onClick={() => setAll(section.key, false)} style={{ ...inp, fontSize: 9, fontFamily: MONO, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, background: "none" }}>None</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {section.actions.map(action => (
+                <label key={action.key} style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", padding: "6px 12px", background: perms[section.key]?.[action.key] ? "rgba(242,103,81,0.1)" : "rgba(255,255,255,0.03)", border: `1px solid ${perms[section.key]?.[action.key] ? "var(--accent-border)" : "var(--border)"}`, borderRadius: 6 }}>
+                  <input type="checkbox" checked={perms[section.key]?.[action.key] ?? false} onChange={() => toggle(section.key, action.key)} style={{ accentColor: "#F26751", width: 13, height: 13 }} />
+                  <span style={{ fontSize: 11, fontFamily: MONO, color: perms[section.key]?.[action.key] ? "var(--accent)" : "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5 }}>{action.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+          <Btn secondary small onClick={onClose}>Cancel</Btn>
+          <Btn onClick={() => onSave(perms)}>Save Permissions ✓</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit User Modal ──────────────────────────────────────────────────────────
+function EditUserModal({ member, onSave, onClose }) {
+  const [email, setEmail] = useState(member.email || "");
+  const [phone, setPhone] = useState(member.phone || "");
+  const [role, setRole] = useState(member.role || "member");
+  const [saving, setSaving] = useState(false);
+  const inp = { width: "100%", padding: "10px 13px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 14 };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(7,24,39,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400, backdropFilter: "blur(4px)" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "32px 36px", maxWidth: 440, width: "92%", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
+        <h3 style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 24px" }}>Edit User</h3>
+        <Label>Email Address</Label>
+        <input value={email} onChange={e => setEmail(e.target.value)} type="email" style={inp} />
+        <Label>Phone Number <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>(for 2FA)</span></Label>
+        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" style={inp} />
+        <Label>Role</Label>
+        <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inp, background: "rgba(16,37,52,0.95)", marginBottom: 24 }}>
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+        </select>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <Btn secondary small onClick={onClose}>Cancel</Btn>
+          <Btn onClick={() => { setSaving(true); onSave({ email, phone, role }).finally(() => setSaving(false)); }} disabled={saving || !email.trim()}>{saving ? "Saving..." : "Save Changes ✓"}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Activity Logs View ───────────────────────────────────────────────────────
+function ActivityLogsView({ orgOwnerId }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const layerColor = { identity: "#F26751", people: "#2EC4B6", rhythm: "#A87EC8", health: "#6EE7D8", onboarding: "#F26751", rhythm_layer: "#A87EC8" };
+  useEffect(() => {
+    supabase.from("activity_logs").select("*")
+      .or(`org_id.eq.${orgOwnerId},user_id.eq.${orgOwnerId}`)
+      .order("created_at", { ascending: false }).limit(200)
+      .then(({ data }) => { setLogs(data || []); setLoading(false); });
+  }, [orgOwnerId]);
+  if (loading) return <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Spinner medium label="Loading logs..." /></div>;
+  if (!logs.length) return <Card><div style={{ textAlign: "center", padding: "20px 0" }}><p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0 }}>No activity logged yet.</p></div></Card>;
+  return (
+    <div>
+      {logs.map((log, i) => (
+        <div key={log.id || i} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "12px 16px", borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: layerColor[log.layer] || "#94A3B8", flexShrink: 0, marginTop: 5 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, color: "var(--text-primary)", margin: "0 0 3px", fontFamily: DISPLAY }}>{log.action}</p>
+            <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--text-secondary)", margin: 0 }}>
+              {log.user_email || "System"} · {log.layer} {log.detail ? `· ${log.detail}` : ""}
+            </p>
+          </div>
+          <span style={{ fontSize: 10, fontFamily: MONO, color: "var(--text-secondary)", flexShrink: 0, marginTop: 2 }}>
+            {log.created_at ? new Date(log.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Security / 2FA Settings ──────────────────────────────────────────────────
+function SecuritySettings({ user }) {
+  const [factors, setFactors] = useState([]);
+  const [qrCode, setQrCode] = useState(null);
+  const [secret, setSecret] = useState(null);
+  const [factorId, setFactorId] = useState(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyStep, setVerifyStep] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const inp = { width: "100%", maxWidth: 200, padding: "10px 13px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: MONO, fontSize: 18, outline: "none", letterSpacing: 6, textAlign: "center", boxSizing: "border-box" };
+
+  const loadFactors = async () => {
+    const { data } = await supabase.auth.mfa.listFactors();
+    setFactors(data?.totp || []);
+  };
+  useEffect(() => { loadFactors(); }, []);
+
+  const startEnroll = async () => {
+    setLoading(true); setError(""); setSuccess("");
+    const { data, error: enrollErr } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+    if (enrollErr) { setError(enrollErr.message); setLoading(false); return; }
+    setQrCode(data.totp.qr_code);
+    setSecret(data.totp.secret);
+    setFactorId(data.id);
+    setVerifyStep(true);
+    setLoading(false);
+  };
+
+  const verifyEnroll = async () => {
+    setLoading(true); setError("");
+    const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId });
+    if (cErr) { setError(cErr.message); setLoading(false); return; }
+    const { error: vErr } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code: verifyCode.replace(/\s/g, "") });
+    if (vErr) { setError("Invalid code. Try again."); setLoading(false); return; }
+    setSuccess("Two-factor authentication enabled."); setVerifyStep(false); setQrCode(null); setVerifyCode("");
+    loadFactors(); setLoading(false);
+  };
+
+  const unenroll = async (id) => {
+    if (!window.confirm("Remove 2FA from your account? This will reduce your account security.")) return;
+    await supabase.auth.mfa.unenroll({ factorId: id });
+    setSuccess("2FA removed."); loadFactors();
+  };
+
+  const activeFactor = factors.find(f => f.status === "verified");
+
+  return (
+    <div style={{ maxWidth: 540 }}>
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 6px" }}>Two-Factor Authentication</h2>
+        <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.65 }}>Add an extra layer of security to your account using an authenticator app (Google Authenticator, Authy, 1Password, etc.)</p>
+      </div>
+
+      {success && <div style={{ padding: "12px 16px", background: "rgba(46,196,182,0.08)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, marginBottom: 20 }}><p style={{ fontSize: 13, color: "#2EC4B6", fontFamily: BODY, margin: 0 }}>{success}</p></div>}
+      {error && <div style={{ padding: "12px 16px", background: "var(--danger-dim)", border: "1px solid var(--danger-border)", borderRadius: 8, marginBottom: 20 }}><p style={{ fontSize: 13, color: "var(--danger)", fontFamily: BODY, margin: 0 }}>{error}</p></div>}
+
+      {activeFactor ? (
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <span style={{ fontSize: 16 }}>🔐</span>
+                <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Authenticator App</p>
+                <Tag color="#2EC4B6">Active</Tag>
+              </div>
+              <p style={{ fontFamily: MONO, fontSize: 10, color: "var(--text-secondary)", margin: 0 }}>Enabled · {activeFactor.friendly_name || "TOTP authenticator"}</p>
+            </div>
+            <Btn danger small onClick={() => unenroll(activeFactor.id)}>Remove 2FA</Btn>
+          </div>
+        </Card>
+      ) : !verifyStep ? (
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <p style={{ fontFamily: DISPLAY, fontSize: 14, color: "var(--text-primary)", margin: "0 0 4px" }}>2FA is not enabled</p>
+              <p style={{ fontFamily: MONO, fontSize: 10, color: "var(--text-secondary)", margin: 0 }}>Protect your account with an authenticator app</p>
+            </div>
+            <Btn onClick={startEnroll} disabled={loading}>{loading ? "Loading..." : "Enable 2FA →"}</Btn>
+          </div>
+        </Card>
+      ) : (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 12, padding: 28 }}>
+          <Label>Step 1 — Scan QR Code</Label>
+          <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 16px", lineHeight: 1.65 }}>Open your authenticator app and scan this QR code, or manually enter the secret key below.</p>
+          {qrCode && <div style={{ marginBottom: 16, padding: 16, background: "#fff", borderRadius: 8, display: "inline-block" }}><img src={qrCode} alt="2FA QR Code" style={{ width: 180, height: 180, display: "block" }} /></div>}
+          {secret && <div style={{ padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: 6, marginBottom: 20 }}><p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 4px" }}>Manual Entry Key</p><p style={{ fontSize: 12, fontFamily: MONO, color: "var(--accent)", margin: 0, letterSpacing: 2 }}>{secret}</p></div>}
+          <Label>Step 2 — Verify Code</Label>
+          <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" }}>Enter the 6-digit code from your authenticator app to confirm setup.</p>
+          <input value={verifyCode} onChange={e => setVerifyCode(e.target.value)} placeholder="000 000" maxLength={7} style={inp} />
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <Btn secondary small onClick={() => { setVerifyStep(false); setQrCode(null); setFactorId(null); supabase.auth.mfa.unenroll({ factorId }); }}>Cancel</Btn>
+            <Btn onClick={verifyEnroll} disabled={loading || verifyCode.replace(/\s/g,"").length < 6}>{loading ? "Verifying..." : "Enable 2FA ✓"}</Btn>
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 28, padding: "14px 18px", background: "rgba(110,231,216,0.04)", border: "1px solid rgba(110,231,216,0.15)", borderRadius: 8 }}>
+        <Label c="#6EE7D8">Phone Number (SMS 2FA)</Label>
+        <p style={{ fontSize: 12, color: "var(--text-secondary)", fontFamily: BODY, margin: 0, lineHeight: 1.65 }}>SMS-based 2FA can be configured per user in the Users tab. Phone numbers are stored for verification and account recovery. SMS delivery requires Twilio configuration in your Supabase project settings.</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Users Settings ───────────────────────────────────────────────────────────
+function UsersSettings({ user, orgOwnerId, orgName }) {
+  const [tab, setTab] = useState("active");
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingMember, setEditingMember] = useState(null);
+  const [permsMember, setPermsMember] = useState(null);
+  const [actionMsg, setActionMsg] = useState("");
+  const [actionErr, setActionErr] = useState("");
+
+  const loadMembers = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("organization_members").select("*").eq("org_owner_id", orgOwnerId).order("invited_at", { ascending: false });
+    setMembers(data || []);
+    setLoading(false);
+  };
+  useEffect(() => { loadMembers(); }, []);
+
+  const notify = (msg, isErr = false) => { if (isErr) { setActionErr(msg); setActionMsg(""); } else { setActionMsg(msg); setActionErr(""); } setTimeout(() => { setActionMsg(""); setActionErr(""); }, 4000); };
+
+  const saveUser = async (member, updates) => {
+    await supabase.from("organization_members").update({ email: updates.email, phone: updates.phone, role: updates.role }).eq("id", member.id);
+    setEditingMember(null); notify("User updated."); loadMembers();
+  };
+
+  const savePermissions = async (member, perms) => {
+    await supabase.from("organization_members").update({ permissions: perms }).eq("id", member.id);
+    setPermsMember(null); notify("Permissions saved."); loadMembers();
+  };
+
+  const sendResetPassword = async (member) => {
+    const { error } = await supabase.functions.invoke("invite-user", { body: { email: member.email, orgOwnerId, orgName, resetPassword: true } });
+    if (error) { notify("Failed to send reset email. Is the Edge Function deployed?", true); return; }
+    notify(`Password reset email sent to ${member.email}.`);
+  };
+
+  const resendInvite = async (member) => {
+    const { error } = await supabase.functions.invoke("invite-user", { body: { email: member.email, role: member.role, orgOwnerId, orgName, resend: true } });
+    if (error) { notify("Failed to resend. Is the Edge Function deployed?", true); return; }
+    notify(`Invitation resent to ${member.email}.`); loadMembers();
+  };
+
+  const disableUser = async (member) => {
+    if (!window.confirm(`Disable ${member.email}? They will lose access immediately.`)) return;
+    await supabase.from("organization_members").update({ status: "revoked", disabled_at: new Date().toISOString() }).eq("id", member.id);
+    notify(`${member.email} has been disabled.`); loadMembers();
+  };
+
+  const enableUser = async (member) => {
+    await supabase.from("organization_members").update({ status: "active", disabled_at: null }).eq("id", member.id);
+    notify(`${member.email} re-enabled.`); loadMembers();
+  };
+
+  const activeMembers = members.filter(m => m.status === "active" || m.status === "pending");
+  const disabledMembers = members.filter(m => m.status === "revoked");
+  const statusColor = { pending: "#F26751", active: "#2EC4B6", revoked: "#94A3B8" };
+
+  const MemberRow = ({ m }) => (
+    <Animated delay={0}>
+      <div style={{ background: "var(--surface)", border: `1px solid ${statusColor[m.status] || "#243746"}22`, borderLeft: `3px solid ${statusColor[m.status] || "#94A3B8"}`, borderRadius: 8, padding: "14px 18px", marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{m.email}</p>
+              <Tag color={m.role === "admin" ? "#F26751" : "#94A3B8"}>{m.role}</Tag>
+              <Tag color={statusColor[m.status] || "#94A3B8"}>{m.status}</Tag>
+            </div>
+            <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--text-secondary)", margin: 0 }}>
+              {m.phone ? `📱 ${m.phone}  ·  ` : ""}
+              Invited {new Date(m.invited_at).toLocaleDateString()}{m.joined_at ? ` · Joined ${new Date(m.joined_at).toLocaleDateString()}` : ""}
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <Btn secondary small onClick={() => setEditingMember(m)}>Edit</Btn>
+            <Btn secondary small onClick={() => setPermsMember(m)}>Permissions</Btn>
+            {m.status === "active" && <Btn secondary small onClick={() => sendResetPassword(m)}>Reset Password</Btn>}
+            {m.status === "pending" && <Btn secondary small onClick={() => resendInvite(m)}>Resend Invite</Btn>}
+            {m.status !== "revoked" && <Btn danger small onClick={() => disableUser(m)}>Disable</Btn>}
+          </div>
+        </div>
+      </div>
+    </Animated>
+  );
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 2, marginBottom: 24, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
+        {[["active", `Active (${activeMembers.length})`], ["disabled", `Disabled (${disabledMembers.length})`], ["logs", "User Logs"]].map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} style={{ padding: "10px 18px", background: "none", border: "none", borderBottom: tab === key ? "2px solid var(--accent)" : "2px solid transparent", color: tab === key ? "var(--accent)" : "var(--text-secondary)", fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, cursor: "pointer", marginBottom: -1 }}>{label}</button>
+        ))}
+      </div>
+
+      {actionMsg && <div style={{ padding: "10px 14px", background: "rgba(46,196,182,0.08)", border: "1px solid rgba(46,196,182,0.2)", borderRadius: 6, marginBottom: 16 }}><p style={{ fontSize: 12, color: "#2EC4B6", fontFamily: BODY, margin: 0 }}>{actionMsg}</p></div>}
+      {actionErr && <div style={{ padding: "10px 14px", background: "var(--danger-dim)", border: "1px solid var(--danger-border)", borderRadius: 6, marginBottom: 16 }}><p style={{ fontSize: 12, color: "var(--danger)", fontFamily: BODY, margin: 0 }}>{actionErr}</p></div>}
+
+      {loading ? <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Spinner medium label="Loading users..." /></div> : (
+        <div>
+          {tab === "active" && (
+            activeMembers.length === 0
+              ? <Card><div style={{ textAlign: "center", padding: "20px 0" }}><p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0 }}>No active users yet. Use the Team section to invite users.</p></div></Card>
+              : activeMembers.map(m => <MemberRow key={m.id} m={m} />)
+          )}
+          {tab === "disabled" && (
+            disabledMembers.length === 0
+              ? <Card><div style={{ textAlign: "center", padding: "20px 0" }}><p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0 }}>No disabled users.</p></div></Card>
+              : disabledMembers.map(m => (
+                <Animated key={m.id} delay={0}>
+                  <div style={{ background: "var(--surface)", border: "1px solid #24374622", borderLeft: "3px solid #94A3B8", borderRadius: 8, padding: "14px 18px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 3px", fontFamily: DISPLAY }}>{m.email}</p>
+                      <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--text-secondary)", margin: 0 }}>Disabled {m.disabled_at ? new Date(m.disabled_at).toLocaleDateString() : ""}</p>
+                    </div>
+                    <Btn small onClick={() => enableUser(m)}>Re-enable</Btn>
+                  </div>
+                </Animated>
+              ))
+          )}
+          {tab === "logs" && <ActivityLogsView orgOwnerId={orgOwnerId} />}
+        </div>
+      )}
+
+      {editingMember && <EditUserModal member={editingMember} onSave={updates => saveUser(editingMember, updates)} onClose={() => setEditingMember(null)} />}
+      {permsMember && <PermissionsModal member={permsMember} onSave={perms => savePermissions(permsMember, perms)} onClose={() => setPermsMember(null)} />}
+    </div>
+  );
+}
+
+// ─── Settings Page ─────────────────────────────────────────────────────────────
+function SettingsPage({ user, orgOwnerId, orgName, onClose }) {
+  const [tab, setTab] = useState("users");
+  const tabs = [["users", "Users"], ["security", "Security & 2FA"]];
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 26 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+            <span style={{ fontSize: 20, color: "#6EE7D8" }}>⚙</span>
+            <h1 style={{ fontSize: 22, fontFamily: DISPLAY, fontWeight: 700, margin: 0, letterSpacing: -0.3, color: "var(--text-primary)" }}>Settings</h1>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0, fontFamily: DISPLAY, opacity: 0.7 }}>{orgName}</p>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 2, marginBottom: 28, borderBottom: "1px solid var(--border)" }}>
+        {tabs.map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} style={{ padding: "10px 20px", background: "none", border: "none", borderBottom: tab === key ? "2px solid #6EE7D8" : "2px solid transparent", color: tab === key ? "#6EE7D8" : "var(--text-secondary)", fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, cursor: "pointer", marginBottom: -1 }}>{label}</button>
+        ))}
+      </div>
+      {tab === "users"    && <UsersSettings user={user} orgOwnerId={orgOwnerId} orgName={orgName} />}
+      {tab === "security" && <SecuritySettings user={user} />}
+    </div>
+  );
+}
+
 // ─── Stripe Pricing Tiers ───────────────────────────────────────────────────
 // Setup: stripe.com → Products → create Core, Growth, Scale with trial periods
 // → Payment Links → replace stripeMonthly / stripeAnnual URLs below
@@ -1495,6 +1881,7 @@ function PerspexisCore() {
   const [dataLoading, setDataLoading] = useState(false);
   const [peopleStarted, setPeopleStarted] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [orgOwnerId, setOrgOwnerId] = useState(null);
   const [userRole, setUserRole] = useState("owner");
   const [showTeam, setShowTeam] = useState(false);
@@ -1546,19 +1933,19 @@ function PerspexisCore() {
   // ── Activity logger ──────────────────────────────────────────────────────
   const logActivity = async (action, layer, detail = "") => {
     if (!user) return;
-    await supabase.from("activity_logs").insert({ user_id: user.id, action, layer, detail });
+    await supabase.from("activity_logs").insert({ user_id: user.id, user_email: user.email, org_id: orgOwnerId || user.id, action, layer, detail }).then(() => {});
   };
 
   // ── Save functions ───────────────────────────────────────────────────────
   const saveIdentity = async (d) => {
     setIdentity(d); setIdentityMode("view");
-    await supabase.from("identity").upsert({ user_id: orgOwnerId || user.id, ...d, updated_at: new Date().toISOString() });
+    await supabase.from("identity").upsert({ user_id: orgOwnerId || user.id, ...d, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
     await logActivity("Identity layer saved", "identity");
   };
 
   const saveOnboarding = async (name, type) => {
     setOrgName(name); setOnboarded(true); setIdentityMode("setup");
-    await supabase.from("profiles").update({ org_name: name, org_type: type }).eq("id", user.id);
+    await supabase.from("profiles").upsert({ id: user.id, org_name: name, org_type: type }, { onConflict: "id" });
     await logActivity("Onboarding completed", "onboarding", `${name} (${type})`);
     if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0);
   };
@@ -1566,13 +1953,13 @@ function PerspexisCore() {
   const savePeople = async (newPeople, newGaps) => {
     setPeople(newPeople);
     if (newGaps !== undefined) setGaps(newGaps);
-    await supabase.from("people").upsert({ user_id: orgOwnerId || user.id, roles: newPeople, gaps: newGaps !== undefined ? newGaps : gaps, updated_at: new Date().toISOString() });
+    await supabase.from("people").upsert({ user_id: orgOwnerId || user.id, roles: newPeople, gaps: newGaps !== undefined ? newGaps : gaps, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
     await logActivity("People layer updated", "people");
   };
 
   const saveRhythm = async (d) => {
     setRhythm(d);
-    await supabase.from("rhythm").upsert({ user_id: orgOwnerId || user.id, current_state: d.current, cadences: d.cadences, breaks: d.breaks, updated_at: new Date().toISOString() });
+    await supabase.from("rhythm").upsert({ user_id: orgOwnerId || user.id, current_state: d.current, cadences: d.cadences, breaks: d.breaks, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
     await logActivity("Rhythm layer saved", "rhythm");
   };
 
@@ -1760,7 +2147,7 @@ function PerspexisCore() {
           </div>
           <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 3, margin: "0 0 14px 10px" }}>Core Layers</p>
           {LAYERS.map((l, li) => (
-            <button key={l.id} onClick={() => setActive(l.id)} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: active === l.id ? "var(--accent-dim)" : "transparent", borderLeft: active === l.id ? "2px solid var(--accent)" : "2px solid transparent", color: active === l.id ? "var(--accent)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2, animation: `fadeUp 0.3s ease ${li * 50}ms both` }}>
+            <button key={l.id} onClick={() => setActive(l.id)} onClick={() => { setActive(l.id); setShowTeam(false); setShowSettings(false); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: !showTeam && !showSettings && active === l.id ? "var(--accent-dim)" : "transparent", borderLeft: !showTeam && !showSettings && active === l.id ? "2px solid var(--accent)" : "2px solid transparent", color: !showTeam && !showSettings && active === l.id ? "var(--accent)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2, animation: `fadeUp 0.3s ease ${li * 50}ms both` }}>
               <span style={{ fontSize: 13, opacity: active === l.id ? 1 : 0.6 }}>{l.icon}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontFamily: DISPLAY, display: "flex", justifyContent: "space-between", letterSpacing: 0.3, fontWeight: active === l.id ? 600 : 400 }}>
@@ -1773,7 +2160,16 @@ function PerspexisCore() {
             </button>
           ))}
           {userRole === "owner" && (
-            <button onClick={() => { setShowTeam(t => !t); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showTeam ? "rgba(46,196,182,0.1)" : "transparent", borderLeft: showTeam ? "2px solid var(--teal)" : "2px solid transparent", color: showTeam ? "var(--teal)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 8 }}>
+            <button onClick={() => { setShowSettings(s => !s); setShowTeam(false); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showSettings ? "rgba(110,231,216,0.1)" : "transparent", borderLeft: showSettings ? "2px solid #6EE7D8" : "2px solid transparent", color: showSettings ? "#6EE7D8" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>
+              <span style={{ fontSize: 13, opacity: showSettings ? 1 : 0.6 }}>⚙</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontFamily: DISPLAY, letterSpacing: 0.3, fontWeight: showSettings ? 600 : 400 }}>Settings</div>
+                <div style={{ fontSize: 9, color: "var(--text-primary)", marginTop: 2, fontFamily: MONO, letterSpacing: 0.3, opacity: 0.7 }}>Users, logs & security</div>
+              </div>
+            </button>
+          )}
+          {userRole === "owner" && (
+            <button onClick={() => { setShowTeam(t => !t); setShowPricing(false); setShowSettings(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showTeam ? "rgba(46,196,182,0.1)" : "transparent", borderLeft: showTeam ? "2px solid var(--teal)" : "2px solid transparent", color: showTeam ? "var(--teal)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 8 }}>
               <span style={{ fontSize: 13, opacity: showTeam ? 1 : 0.6 }}>◈◎</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontFamily: DISPLAY, letterSpacing: 0.3, fontWeight: showTeam ? 600 : 400 }}>Manage Team</div>
@@ -1791,7 +2187,9 @@ function PerspexisCore() {
         </div>
 
         <div className="px-content" style={{ flex: 1, overflow: "auto", padding: "30px 34px" }}>
-          {showTeam ? (
+          {showSettings ? (
+            <SettingsPage user={user} orgOwnerId={orgOwnerId || user.id} orgName={orgName} onClose={() => setShowSettings(false)} />
+          ) : showTeam ? (
             <TeamPanel user={user} orgOwnerId={orgOwnerId || user.id} orgName={orgName} onClose={() => setShowTeam(false)} />
           ) : LAYERS.map(l => active === l.id && (
             <div key={l.id}>
@@ -1846,15 +2244,35 @@ function AuthScreen({ onAuth }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
 
   const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid #243746", borderRadius: 6, color: "#F5F7FA", fontFamily: BODY, fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 };
+
+  const handleMFAVerify = async () => {
+    setLoading(true); setError("");
+    const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+    if (cErr) { setError(cErr.message); setLoading(false); return; }
+    const { error: vErr } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challenge.id, code: mfaCode.replace(/\s/g, "") });
+    if (vErr) { setError("Invalid code. Try again."); setLoading(false); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    onAuth(user);
+  };
 
   const handleSubmit = async () => {
     setLoading(true); setError(""); setMessage("");
     if (mode === "login") {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setError(error.message);
-      else onAuth(data.user);
+      if (error) { setError(error.message); setLoading(false); return; }
+      // Check if MFA verification is required
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.nextLevel === "aal2" && aalData?.currentLevel === "aal1") {
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const totpFactor = factorsData?.totp?.[0];
+        if (totpFactor) { setMfaFactorId(totpFactor.id); setMfaRequired(true); setLoading(false); return; }
+      }
+      onAuth(data.user);
     } else if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
       if (error) setError(error.message);
@@ -1924,6 +2342,21 @@ function AuthScreen({ onAuth }) {
       {/* Right panel — auth form */}
       <div className="px-auth-right" style={{ width: 480, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", animation: "fadeUp 0.4s ease 0.1s both" }}>
         <div style={{ width: "100%" }}>
+          {mfaRequired ? (
+            <div style={{ animation: "fadeUp 0.3s ease both" }}>
+              <div style={{ textAlign: "center", marginBottom: 28 }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
+                <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, color: "#F5F7FA", margin: "0 0 8px" }}>Two-Factor Authentication</h2>
+                <p style={{ fontFamily: BODY, fontSize: 13, color: "#94A3B8", margin: 0 }}>Enter the 6-digit code from your authenticator app.</p>
+              </div>
+              <input value={mfaCode} onChange={e => setMfaCode(e.target.value)} onKeyDown={e => e.key === "Enter" && handleMFAVerify()} placeholder="000 000" maxLength={7} style={{ width: "100%", padding: "16px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid #243746", borderRadius: 6, color: "#F5F7FA", fontFamily: MONO, fontSize: 24, outline: "none", boxSizing: "border-box", marginBottom: 12, letterSpacing: 8, textAlign: "center" }} />
+              {error && <p style={{ fontSize: 12, color: "#F26751", fontFamily: BODY, margin: "0 0 12px" }}>{error}</p>}
+              <button onClick={handleMFAVerify} disabled={loading || mfaCode.replace(/\s/g,"").length < 6} style={{ width: "100%", padding: "13px", background: "#F26751", border: "none", borderRadius: 6, color: "#071827", fontFamily: DISPLAY, fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 14 }}>
+                {loading ? "Verifying..." : "Verify →"}
+              </button>
+              <button onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); }} style={{ background: "none", border: "none", color: "#94A3B8", fontFamily: BODY, fontSize: 13, cursor: "pointer", width: "100%", textAlign: "center" }}>← Back to sign in</button>
+            </div>
+          ) : (<>
           <div className="px-show-mobile" style={{ display: "none", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
             <PerspexisLogo height={120} />
             <p style={{ fontFamily: MONO, fontSize: 9, color: "#F26751", textTransform: "uppercase", letterSpacing: 2.5, margin: "8px 0 0", textAlign: "center" }}>Clarity. Alignment. Momentum.</p>
@@ -1963,6 +2396,7 @@ function AuthScreen({ onAuth }) {
           <div style={{ textAlign: "center", marginTop: 24, paddingTop: 18, borderTop: "1px solid #243746" }}>
             <a href="/pricing" style={{ fontSize: 10, fontFamily: MONO, color: "#94A3B8", textDecoration: "none", textTransform: "uppercase", letterSpacing: 1.5 }}>View Pricing & Plans →</a>
           </div>
+          </>)}
         </div>
       </div>
     </div>
