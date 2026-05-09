@@ -1433,23 +1433,61 @@ function PerspexisLogo() {
   return (
     <svg
       width="200"
-      height="42"
-      viewBox="0 0 200 42"
+      height="122"
+      viewBox="0 0 500 305"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Perspexis"
     >
+      <defs>
+        <linearGradient id="coral" x1="180" y1="70" x2="320" y2="130">
+          <stop stopColor="#FF7A66" />
+          <stop offset="1" stopColor="#F26751" />
+        </linearGradient>
+        <linearGradient id="teal" x1="130" y1="135" x2="370" y2="135">
+          <stop stopColor="#42AFC0" />
+          <stop offset="1" stopColor="#1F7F8E" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="4" floodOpacity="0.35" />
+        </filter>
+      </defs>
+      {/* Top coral diamond */}
+      <path
+        d="M250 54 L316 94 Q326 100 316 107 L250 147 L184 107 Q174 100 184 94 Z"
+        fill="url(#coral)"
+        filter="url(#shadow)"
+      />
+      {/* Teal chevron layer */}
+      <path
+        d="M115 142 Q115 132 126 126 L148 113 Q158 108 168 114 L250 162 L332 114 Q342 108 352 113 L374 126 Q385 132 385 142 L385 157 Q385 166 376 171 L262 238 Q250 245 238 238 L124 171 Q115 166 115 157 Z"
+        fill="url(#teal)"
+        filter="url(#shadow)"
+      />
+      {/* White lower chevron layer */}
+      <path
+        d="M115 198 Q115 188 126 182 L148 169 Q158 164 168 170 L250 218 L332 170 Q342 164 352 169 L374 182 Q385 188 385 198 L385 213 Q385 222 376 227 L262 294 Q250 301 238 294 L124 227 Q115 222 115 213 Z"
+        fill="#F4F4F2"
+        stroke="#D7D7D2"
+        strokeWidth="3"
+        filter="url(#shadow)"
+      />
+      {/* Wordmark */}
       <text
-        x="0"
-        y="30"
-        fontFamily="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        fontSize="32"
+        x="250"
+        y="275"
+        textAnchor="middle"
+        fontFamily="'Orbitron', 'Audiowide', 'Eurostile', 'Michroma', sans-serif"
+        fontSize="64"
         fontWeight="700"
-        letterSpacing="-1.4"
-        fill="#F26751"
+        letterSpacing="-3"
+        fill="#EDEDEB"
+        stroke="#3A3A3A"
+        strokeWidth="2"
+        paintOrder="stroke fill"
       >
-        Perspexis
+        perspexis
       </text>
     </svg>
   );
