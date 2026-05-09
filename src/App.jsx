@@ -1505,7 +1505,7 @@ function OnboardingScreen({ onStart }) {
                 {/* Logo */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 48 }}>
           <PerspexisLogo />
-          <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 2.5, margin: 0 }}>Clarity. Alignment. Momentum.</p>
+          <p style={{ fontSize: 10, fontFamily: MONO, color: "#F26751", textTransform: "uppercase", letterSpacing: 2.5, margin: 0 }}>Clarity. Alignment. Momentum.</p>
         </div>
 
         {/* Welcome card */}
