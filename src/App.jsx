@@ -992,6 +992,239 @@ function TutorialOverlay({ step, onNext, onSkip }) {
   );
 }
 
+// ─── User Agreement ─────────────────────────────────────────────────────────
+const USER_AGREEMENT = `PERSPEXIS PLATFORM USER AGREEMENT
+
+Effective Date: 2026
+
+Welcome to Perspexis. By accepting this invitation, you ("User") agree to the following terms set forth by Perspexis ("Company") and the organization that invited you ("Organization").
+
+1. AUTHORIZED ACCESS
+Your access has been granted by an authorized administrator of the Organization and is limited to the permissions they assign. Access may be modified or revoked at any time.
+
+2. ACCEPTABLE USE
+You agree to use Perspexis solely for legitimate organizational purposes. You will not: (a) share credentials with others; (b) access data beyond your permissions; (c) use the platform for any unlawful purpose; or (d) reverse-engineer proprietary systems.
+
+3. CONFIDENTIALITY
+Information accessible through this account may be proprietary and confidential to the Organization. You agree to maintain strict confidentiality and not disclose such information to unauthorized parties.
+
+4. DATA AND PRIVACY
+Perspexis processes data as described in our Privacy Policy. By using the platform, you consent to collection and processing of your usage data as necessary to provide the service.
+
+5. ACCOUNT SECURITY
+You are solely responsible for maintaining the confidentiality of your credentials. Notify your administrator immediately of any unauthorized account access.
+
+6. INTELLECTUAL PROPERTY
+All content, features, and functionality of Perspexis are the exclusive property of Perspexis and protected by applicable intellectual property laws.
+
+7. TERMINATION
+Your access may be terminated at any time by the Organization's administrator or by Perspexis for any violation of these terms.
+
+8. DISCLAIMER OF WARRANTIES
+The platform is provided "as is" without warranties of any kind. Perspexis does not warrant that the platform will be error-free or uninterrupted.
+
+9. LIMITATION OF LIABILITY
+To the maximum extent permitted by law, Perspexis shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the service.
+
+10. GOVERNING LAW
+This Agreement is governed by the laws of the State of North Carolina, without regard to conflict of law provisions.
+
+By clicking "I Agree," you confirm you have read, understood, and agree to be bound by this Agreement.`;
+
+// ─── Invite Accept Page ──────────────────────────────────────────────────────
+function InviteAcceptPage({ user, onAccepted }) {
+  const [step, setStep] = useState("agreement");
+  const [agreed, setAgreed] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleAccept = async () => {
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (password !== confirm) { setError("Passwords don't match."); return; }
+    setLoading(true); setError("");
+    const { error: pwErr } = await supabase.auth.updateUser({
+      password,
+      data: { needs_onboarding: false },
+    });
+    if (pwErr) { setError(pwErr.message); setLoading(false); return; }
+    await supabase.from("organization_members").update({
+      member_user_id: user.id,
+      status: "active",
+      agreed_to_terms_at: new Date().toISOString(),
+      joined_at: new Date().toISOString(),
+    }).eq("email", user.email).eq("status", "pending");
+    onAccepted();
+  };
+
+  const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid #243746", borderRadius: 6, color: "#F5F7FA", fontFamily: "'Inter', sans-serif", fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#071827", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Space Grotesk', sans-serif", padding: 24 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } } input::placeholder { color: #94A3B8 !important; } input:focus { border-color: #F26751 !important; outline: none; }`}</style>
+      <div style={{ width: "100%", maxWidth: 520, animation: "fadeUp 0.4s ease both" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <PerspexisLogo height={100} />
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#F26751", textTransform: "uppercase", letterSpacing: 2.5, margin: "8px 0 0" }}>Clarity. Alignment. Momentum.</p>
+        </div>
+        <div style={{ background: "#0D2236", border: "1px solid rgba(242,103,81,0.18)", borderRadius: 14, padding: 36, boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: "#F5F7FA", margin: "0 0 4px" }}>You've been invited to Perspexis</h2>
+          <p style={{ fontSize: 13, fontFamily: "'Inter', sans-serif", color: "#94A3B8", margin: "0 0 24px" }}>Signing in as <strong style={{ color: "#F5F7FA" }}>{user.email}</strong></p>
+
+          {step === "agreement" ? (
+            <div>
+              <p style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: "#F26751", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 8px" }}>User Agreement</p>
+              <div style={{ height: 220, overflowY: "auto", background: "rgba(0,0,0,0.25)", border: "1px solid #243746", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
+                <pre style={{ fontSize: 11, fontFamily: "'Inter', sans-serif", color: "#94A3B8", whiteSpace: "pre-wrap", lineHeight: 1.75, margin: 0 }}>{USER_AGREEMENT}</pre>
+              </div>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 24 }}>
+                <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: 3, accentColor: "#F26751", flexShrink: 0, width: 15, height: 15 }} />
+                <span style={{ fontSize: 13, fontFamily: "'Inter', sans-serif", color: "#F5F7FA", lineHeight: 1.6 }}>I have read and agree to the Perspexis User Agreement</span>
+              </label>
+              <Btn onClick={() => setStep("password")} disabled={!agreed}>Continue — Create Password →</Btn>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: "#F26751", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 8px" }}>Create Your Password</p>
+              <p style={{ fontSize: 13, fontFamily: "'Inter', sans-serif", color: "#94A3B8", margin: "0 0 18px", lineHeight: 1.6 }}>Choose a strong password (minimum 8 characters) to secure your account.</p>
+              <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" style={inp} />
+              <input value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm password" type="password" style={inp} />
+              {error && <p style={{ fontSize: 12, color: "#F26751", fontFamily: "'Inter', sans-serif", margin: "0 0 12px" }}>{error}</p>}
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn secondary small onClick={() => { setStep("agreement"); setError(""); }}>← Back</Btn>
+                <Btn onClick={handleAccept} disabled={loading || !password || !confirm}>{loading ? "Joining..." : "Join Organization →"}</Btn>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Team Panel ──────────────────────────────────────────────────────────────
+function TeamPanel({ user, orgOwnerId, orgName, onClose }) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
+  const [showForm, setShowForm] = useState(false);
+
+  const loadMembers = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("organization_members").select("*").eq("org_owner_id", orgOwnerId).order("invited_at", { ascending: false });
+    setMembers(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadMembers(); }, []);
+
+  const sendInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviting(true); setInviteError(""); setInviteSuccess("");
+    const { error } = await supabase.functions.invoke("invite-user", {
+      body: { email: inviteEmail.trim(), role: inviteRole, orgOwnerId, orgName }
+    });
+    if (error) {
+      setInviteError(error.message || "Failed to send invite. Ensure the Edge Function is deployed.");
+    } else {
+      setInviteSuccess(`Invitation sent to ${inviteEmail.trim()}`);
+      setInviteEmail(""); setShowForm(false); loadMembers();
+    }
+    setInviting(false);
+  };
+
+  const revokeAccess = async (id) => {
+    if (!window.confirm("Revoke this user's access?")) return;
+    await supabase.from("organization_members").update({ status: "revoked" }).eq("id", id);
+    loadMembers();
+  };
+
+  const statusColor = { pending: "#F26751", active: "#2EC4B6", revoked: "#94A3B8" };
+  const inp = { width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box" };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 26 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+            <span style={{ fontSize: 20, color: "var(--accent)" }}>◈◎</span>
+            <h1 style={{ fontSize: 22, fontFamily: DISPLAY, fontWeight: 700, margin: 0, letterSpacing: -0.3, color: "var(--text-primary)" }}>Team Members</h1>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0, fontFamily: DISPLAY, opacity: 0.7 }}>Manage who has access to {orgName}'s operating system</p>
+        </div>
+        <Btn small onClick={() => setShowForm(f => !f)}>+ Invite User</Btn>
+      </div>
+
+      {showForm && (
+        <Animated delay={0}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderLeft: "3px solid var(--accent)", borderRadius: 8, padding: 20, marginBottom: 20 }}>
+            <Label>Invite New User</Label>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 12 }} className="px-grid-2">
+              <div><Label>Email Address</Label><input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="user@example.com" type="email" style={inp} onKeyDown={e => e.key === "Enter" && sendInvite()} /></div>
+              <div><Label>Role</Label>
+                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ ...inp, background: "rgba(16,37,52,0.95)" }}>
+                  <option value="member">Member — View only</option>
+                  <option value="admin">Admin — Full access</option>
+                </select>
+              </div>
+            </div>
+            {inviteError && <p style={{ fontSize: 11, color: "#CC5A4A", fontFamily: MONO, margin: "0 0 10px" }}>{inviteError}</p>}
+            {inviteSuccess && <p style={{ fontSize: 11, color: "#2EC4B6", fontFamily: MONO, margin: "0 0 10px" }}>{inviteSuccess}</p>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn secondary small onClick={() => { setShowForm(false); setInviteError(""); setInviteSuccess(""); }}>Cancel</Btn>
+              <Btn small onClick={sendInvite} disabled={inviting || !inviteEmail.trim()}>{inviting ? "Sending..." : "Send Invitation →"}</Btn>
+            </div>
+          </div>
+        </Animated>
+      )}
+
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Spinner medium label="Loading team..." /></div>
+      ) : members.length === 0 ? (
+        <Card>
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{ fontSize: 36, marginBottom: 14, opacity: 0.4 }}>◎</div>
+            <p style={{ fontSize: 14, color: "var(--text-primary)", margin: "0 0 6px" }}>No team members yet</p>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, fontFamily: MONO }}>Invite users to collaborate on your operating system.</p>
+          </div>
+        </Card>
+      ) : (
+        <div>
+          {members.map((m, i) => (
+            <Animated key={m.id} delay={i * 40}>
+              <div style={{ background: "var(--surface)", border: `1px solid ${statusColor[m.status]}22`, borderLeft: `3px solid ${statusColor[m.status] || "#94A3B8"}`, borderRadius: 8, padding: "14px 18px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                    <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{m.email}</p>
+                    <Tag color={m.role === "admin" ? "#F26751" : "#94A3B8"}>{m.role}</Tag>
+                    <Tag color={statusColor[m.status] || "#94A3B8"}>{m.status}</Tag>
+                  </div>
+                  <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--text-secondary)", margin: 0 }}>
+                    Invited {new Date(m.invited_at).toLocaleDateString()}{m.joined_at ? ` · Joined ${new Date(m.joined_at).toLocaleDateString()}` : ""}
+                  </p>
+                </div>
+                {m.status !== "revoked" && <Btn danger small onClick={() => revokeAccess(m.id)}>Revoke</Btn>}
+              </div>
+            </Animated>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: 28, padding: "14px 18px", background: "rgba(46,196,182,0.04)", border: "1px solid rgba(46,196,182,0.15)", borderRadius: 8 }}>
+        <Label c="#2EC4B6">Setup Required</Label>
+        <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, fontFamily: BODY, lineHeight: 1.65 }}>
+          Sending invitations requires the <code style={{ color: "#F26751", background: "rgba(242,103,81,0.1)", padding: "1px 5px", borderRadius: 3 }}>invite-user</code> Edge Function to be deployed and the SQL migration in <code style={{ color: "#F26751", background: "rgba(242,103,81,0.1)", padding: "1px 5px", borderRadius: 3 }}>supabase/migrations/</code> to be run. See the README for instructions.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Stripe Pricing Tiers ───────────────────────────────────────────────────
 // Setup: stripe.com → Products → create Core, Growth, Scale with trial periods
 // → Payment Links → replace stripeMonthly / stripeAnnual URLs below
@@ -1247,6 +1480,9 @@ function PerspexisCore() {
   const [dataLoading, setDataLoading] = useState(false);
   const [peopleStarted, setPeopleStarted] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [orgOwnerId, setOrgOwnerId] = useState(null);
+  const [userRole, setUserRole] = useState("owner");
+  const [showTeam, setShowTeam] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(null);
 
   // ── Auth state listener ──────────────────────────────────────────────────
@@ -1266,11 +1502,22 @@ function PerspexisCore() {
     if (!user) return;
     const loadData = async () => {
       setDataLoading(true);
+      // Check if this user is a member of another organization
+      const { data: memberRecord } = await supabase
+        .from("organization_members")
+        .select("org_owner_id, role")
+        .eq("member_user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+      const oid = memberRecord ? memberRecord.org_owner_id : user.id;
+      const role = memberRecord ? memberRecord.role : "owner";
+      setOrgOwnerId(oid);
+      setUserRole(role);
       const [profileRes, identityRes, peopleRes, rhythmRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single(),
-        supabase.from("identity").select("*").eq("user_id", user.id).single(),
-        supabase.from("people").select("*").eq("user_id", user.id).single(),
-        supabase.from("rhythm").select("*").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("*").eq("id", oid).single(),
+        supabase.from("identity").select("*").eq("user_id", oid).single(),
+        supabase.from("people").select("*").eq("user_id", oid).single(),
+        supabase.from("rhythm").select("*").eq("user_id", oid).single(),
       ]);
       if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOnboarded(true); if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0); }
       if (identityRes.data) { setIdentity({ mission: identityRes.data.mission, guiding: identityRes.data.guiding, vision_north: identityRes.data.vision_north, vision_phase: identityRes.data.vision_phase, values: identityRes.data.values, positioning: identityRes.data.positioning }); setIdentityMode("view"); }
@@ -1290,7 +1537,7 @@ function PerspexisCore() {
   // ── Save functions ───────────────────────────────────────────────────────
   const saveIdentity = async (d) => {
     setIdentity(d); setIdentityMode("view");
-    await supabase.from("identity").upsert({ user_id: user.id, ...d, updated_at: new Date().toISOString() });
+    await supabase.from("identity").upsert({ user_id: orgOwnerId || user.id, ...d, updated_at: new Date().toISOString() });
     await logActivity("Identity layer saved", "identity");
   };
 
@@ -1304,13 +1551,13 @@ function PerspexisCore() {
   const savePeople = async (newPeople, newGaps) => {
     setPeople(newPeople);
     if (newGaps !== undefined) setGaps(newGaps);
-    await supabase.from("people").upsert({ user_id: user.id, roles: newPeople, gaps: newGaps !== undefined ? newGaps : gaps, updated_at: new Date().toISOString() });
+    await supabase.from("people").upsert({ user_id: orgOwnerId || user.id, roles: newPeople, gaps: newGaps !== undefined ? newGaps : gaps, updated_at: new Date().toISOString() });
     await logActivity("People layer updated", "people");
   };
 
   const saveRhythm = async (d) => {
     setRhythm(d);
-    await supabase.from("rhythm").upsert({ user_id: user.id, current_state: d.current, cadences: d.cadences, breaks: d.breaks, updated_at: new Date().toISOString() });
+    await supabase.from("rhythm").upsert({ user_id: orgOwnerId || user.id, current_state: d.current, cadences: d.cadences, breaks: d.breaks, updated_at: new Date().toISOString() });
     await logActivity("Rhythm layer saved", "rhythm");
   };
 
@@ -1358,6 +1605,14 @@ function PerspexisCore() {
   );
 
   if (!user) return <AuthScreen onAuth={setUser} />;
+
+  // Invited user: must agree to terms and set a password before entering
+  if (user.user_metadata?.needs_onboarding) {
+    return <InviteAcceptPage user={user} onAccepted={async () => {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      setUser(u);
+    }} />;
+  }
 
   // ── Beta whitelist check ─────────────────────────────────────────────────
   const BETA_EMAILS = [
@@ -1469,7 +1724,8 @@ function PerspexisCore() {
             <PerspexisLogo height={80} />
           </div>
           <div style={{ width: 1, height: 16, background: "var(--border-strong)" }} />
-          <span style={{ fontSize: 13, fontFamily: MONO, color: "var(--text-primary)", letterSpacing: 0.3 }}>Kingdom House</span>
+          <span style={{ fontSize: 13, fontFamily: MONO, color: "var(--text-primary)", letterSpacing: 0.3 }}>{orgName || "Kingdom House"}</span>
+          {userRole !== "owner" && <span style={{ padding: "2px 8px", borderRadius: 3, background: "rgba(110,231,216,0.1)", border: "1px solid rgba(110,231,216,0.2)", color: "#6EE7D8", fontSize: 9, fontFamily: MONO, textTransform: "uppercase", letterSpacing: 1.5 }}>{userRole}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ textAlign: "right" }}>
@@ -1501,6 +1757,15 @@ function PerspexisCore() {
               </div>
             </button>
           ))}
+          {userRole === "owner" && (
+            <button onClick={() => { setShowTeam(t => !t); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showTeam ? "rgba(46,196,182,0.1)" : "transparent", borderLeft: showTeam ? "2px solid var(--teal)" : "2px solid transparent", color: showTeam ? "var(--teal)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 8 }}>
+              <span style={{ fontSize: 13, opacity: showTeam ? 1 : 0.6 }}>◈◎</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontFamily: DISPLAY, letterSpacing: 0.3, fontWeight: showTeam ? 600 : 400 }}>Manage Team</div>
+                <div style={{ fontSize: 9, color: "var(--text-primary)", marginTop: 2, fontFamily: MONO, letterSpacing: 0.3, opacity: 0.7 }}>Users & permissions</div>
+              </div>
+            </button>
+          )}
           <div style={{ position: "absolute", bottom: 16, left: 10, right: 10, padding: "13px 12px", background: "rgba(46,196,182,0.03)", border: "1px solid rgba(46,196,182,0.1)", borderRadius: 8 }}>
             <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 5px" }}>Next Tier</p>
             <p style={{ fontSize: 10, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.5, fontFamily: DISPLAY }}>Numbers, Process & Growth</p>
@@ -1511,7 +1776,9 @@ function PerspexisCore() {
         </div>
 
         <div className="px-content" style={{ flex: 1, overflow: "auto", padding: "30px 34px" }}>
-          {LAYERS.map(l => active === l.id && (
+          {showTeam ? (
+            <TeamPanel user={user} orgOwnerId={orgOwnerId || user.id} orgName={orgName} onClose={() => setShowTeam(false)} />
+          ) : LAYERS.map(l => active === l.id && (
             <div key={l.id}>
               <div style={{ marginBottom: 26 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
