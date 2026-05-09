@@ -228,18 +228,6 @@ function PeopleView({ people, gaps, onUpdateRole, onUpdateGaps, onAddRole, onRem
   const roleTypes = ["leader", "director", "coordinator", "support", "pastor", "vacant"];
   const inp = { width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box" };
 
-  const saveNewRole = () => {
-    if (!newRole.name.trim() || !newRole.role.trim()) return;
-    if (people.length === 1 && people[0].name === "") {
-      onUpdateRole(people[0].role, newRole.owns);
-      onAddRole && onAddRole({ ...newRole });
-      // Actually replace the placeholder
-    }
-    onAddRole && onAddRole({ ...newRole });
-    setNewRole({ type: "leader", name: "", role: "", owns: "", reports: "" });
-    setAddingRole(false);
-  };
-
 
   const gradePeople = async () => {
     setGrading(true); setGradeError("");
@@ -1050,6 +1038,7 @@ export default function PerspexisCore() {
   const [rhythm, setRhythm] = useState(null);
   const [rhythmMode, setRhythmMode] = useState("setup");
   const [dataLoading, setDataLoading] = useState(false);
+  const [peopleStarted, setPeopleStarted] = useState(false);
 
   // ── Auth state listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1110,7 +1099,7 @@ export default function PerspexisCore() {
   };
 
   const saveRhythm = async (d) => {
-    saveRhythm(d);
+    setRhythm(d);
     await supabase.from("rhythm").upsert({ user_id: user.id, current_state: d.current, cadences: d.cadences, breaks: d.breaks, updated_at: new Date().toISOString() });
     await logActivity("Rhythm layer saved", "rhythm");
   };
@@ -1118,6 +1107,21 @@ export default function PerspexisCore() {
   const updateRole = (role, owns) => {
     const updated = people.map(r => r.role === role ? { ...r, owns } : r);
     savePeople(updated, gaps);
+  };
+
+  const addRole = (newRole) => {
+    const updated = [...people, newRole];
+    savePeople(updated, gaps);
+  };
+
+  const removeRole = (roleName) => {
+    const updated = people.filter(r => r.role !== roleName);
+    savePeople(updated, gaps);
+  };
+
+  const updateGaps = (newGaps) => {
+    setGaps(newGaps);
+    if (newGaps !== "diagnosing") savePeople(people, newGaps);
   };
 
   const updateRhythm = (updated) => { saveRhythm(updated); };
@@ -1285,18 +1289,14 @@ export default function PerspexisCore() {
 
               {l.id === "health" && <HealthOverview identity={identity} people={people} gaps={gaps} rhythm={rhythm} />}
               {l.id === "identity" && (
-                !identity
-                  ? <IdentitySetupPrompt onStart={() => setIdentityMode("setup")} />
-                  : identityMode === "edit" || identityMode === "setup"
-                    ? <IdentityEdit data={identity || {mission:"",guiding:"",vision_north:"",vision_phase:"",values:[{name:"",desc:""},{name:"",desc:""},{name:"",desc:""},{name:"",desc:""}],positioning:""}} onSave={saveIdentity} onCancel={() => identity && setIdentityMode("view")} isNew={!identity} />
-                    : <IdentityView data={identity} onEdit={() => setIdentityMode("edit")} />
+                identityMode === "edit" || identityMode === "setup"
+                  ? <IdentityEdit data={identity || {mission:"",guiding:"",vision_north:"",vision_phase:"",values:[{name:"",desc:""},{name:"",desc:""},{name:"",desc:""},{name:"",desc:""}],positioning:""}} onSave={saveIdentity} onCancel={() => identity && setIdentityMode("view")} isSetup={!identity} />
+                  : <IdentityView data={identity} onEdit={() => setIdentityMode("edit")} />
               )}
               {l.id === "people" && (
-                !people
-                  ? <PeopleSetupPrompt onStart={() => {
-                      setPeople([{ type:"pastor", name:"", role:"", owns:"", reports:"—" }]);
-                    }} />
-                  : <PeopleView people={people} gaps={gaps} onUpdateRole={updateRole} onUpdateGaps={setGaps} />
+                people.length === 0 && !peopleStarted
+                  ? <EmptyPeopleState onAdd={() => setPeopleStarted(true)} />
+                  : <PeopleView people={people} gaps={gaps} onUpdateRole={updateRole} onUpdateGaps={updateGaps} onAddRole={addRole} onRemoveRole={removeRole} />
               )}
               {l.id === "rhythm" && (rhythm && rhythmMode === "view"
                 ? <RhythmView data={rhythm} onUpdate={updateRhythm} />
