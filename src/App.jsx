@@ -1433,50 +1433,51 @@ function PerspexisLogo() {
   return (
     <svg
       height="200"
-      viewBox="0 0 400 520"
+      viewBox="0 0 1200 700"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Perspexis logo"
       style={{ display: "block" }}
     >
-      {/* Coral rounded diamond */}
-      <rect
-        x="180" y="149" width="40" height="40" rx="8"
-        transform="rotate(45 200 169)"
-        fill="#E8574A"
-      />
-
+      <defs>
+        <linearGradient id="coral" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FF7C69" />
+          <stop offset="100%" stopColor="#F26751" />
+        </linearGradient>
+        <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#4CC2D3" />
+          <stop offset="100%" stopColor="#2296A8" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="10" stdDeviation="10" floodColor="#000000" floodOpacity="0.22" />
+        </filter>
+      </defs>
+      {/* Coral diamond */}
+      <g filter="url(#shadow)">
+        <path d="M600 95L675 145C684 151 684 164 675 170L600 220L525 170C516 164 516 151 525 145L600 95Z" fill="url(#coral)" />
+      </g>
       {/* Teal chevron */}
-      <path
-        d="M 78 192 L 200 282 L 322 192"
-        fill="none"
-        stroke="#2B9BAB"
-        strokeWidth="46"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Light gray chevron */}
-      <path
-        d="M 78 260 L 200 350 L 322 260"
-        fill="none"
-        stroke="#D8D8D5"
-        strokeWidth="46"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
+      <g filter="url(#shadow)">
+        <path d="M460 235C472 225 490 224 503 233L600 294L697 233C710 224 728 225 740 235L760 251C770 259 770 275 760 283L620 372C607 381 593 381 580 372L440 283C430 275 430 259 440 251L460 235Z" fill="url(#teal)" />
+      </g>
+      {/* White chevron */}
+      <g filter="url(#shadow)">
+        <path d="M460 345C472 335 490 334 503 343L600 404L697 343C710 334 728 335 740 345L760 361C770 369 770 385 760 393L620 482C607 491 593 491 580 482L440 393C430 385 430 369 440 361L460 345Z" fill="#F5F5F3" stroke="#DADADA" strokeWidth="4" />
+      </g>
       {/* Wordmark */}
       <text
-        x="200"
-        y="466"
+        x="600"
+        y="610"
         textAnchor="middle"
-        fontFamily="'Nunito', 'Varela Round', 'Quicksand', system-ui, sans-serif"
-        fontSize="70"
-        fontWeight="700"
-        letterSpacing="-1"
-        fill="#E0E0DD"
+        fontFamily="Orbitron, Audiowide, Rajdhani, sans-serif"
+        fontSize="120"
+        fontWeight="600"
+        letterSpacing="-7"
+        fill="#EFEFEF"
+        stroke="#CFCFCF"
+        strokeWidth="2"
+        paintOrder="stroke fill"
       >
         perspexis
       </text>
