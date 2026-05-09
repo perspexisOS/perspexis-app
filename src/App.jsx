@@ -1509,24 +1509,26 @@ function OnboardingScreen({ onStart }) {
         </div>
 
         {/* Welcome card */}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 36, boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px", letterSpacing: -0.3 }}>Welcome to Perspexis</h1>
-          <p style={{ fontSize: 14, fontFamily: BODY, color: "var(--text-secondary)", margin: "0 0 28px", lineHeight: 1.65 }}>
+        <div style={{ background: "#0D2236", border: "1px solid rgba(242,103,81,0.18)", borderRadius: 14, padding: 36, boxShadow: "0 8px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(242,103,81,0.06)" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#F5F7FA", margin: "0 0 8px", letterSpacing: -0.3 }}>
+            Welcome to <span style={{ color: "#F26751" }}>Perspexis</span>
+          </h1>
+          <p style={{ fontSize: 14, fontFamily: BODY, color: "#94A3B8", margin: "0 0 28px", lineHeight: 1.65 }}>
             Let's build your operating system. Start by telling us about your organization.
           </p>
 
           {/* Org name */}
           <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 8px" }}>Organization Name</p>
+            <p style={{ fontSize: 9, fontFamily: MONO, color: "#F26751", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 8px" }}>Organization Name</p>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. BuildRight Contracting"
               style={{
                 width: "100%", padding: "12px 14px",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid var(--border)",
-                borderRadius: 6, color: "var(--text-primary)",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 6, color: "#F5F7FA",
                 fontFamily: DISPLAY, fontSize: 14, outline: "none",
                 boxSizing: "border-box"
               }}
@@ -1535,14 +1537,14 @@ function OnboardingScreen({ onStart }) {
 
           {/* Org type */}
           <div style={{ marginBottom: 32 }}>
-            <p style={{ fontSize: 9, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 10px" }}>Organization Type</p>
+            <p style={{ fontSize: 9, fontFamily: MONO, color: "#F26751", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 10px" }}>Organization Type</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {orgTypes.map(t => (
                 <button key={t} className="type-btn" onClick={() => setType(t)} style={{
-                  padding: "7px 14px", borderRadius: 4,
-                  background: type === t ? "var(--accent-dim)" : "transparent",
-                  border: `1px solid ${type === t ? "var(--accent)" : "var(--border)"}`,
-                  color: type === t ? "var(--accent)" : "var(--text-secondary)",
+                  padding: "7px 14px", borderRadius: 6,
+                  background: type === t ? "rgba(242,103,81,0.12)" : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${type === t ? "#F26751" : "rgba(255,255,255,0.1)"}`,
+                  color: type === t ? "#F26751" : "#94A3B8",
                   fontFamily: DISPLAY, fontSize: 12, cursor: "pointer",
                   transition: "all 0.15s ease"
                 }}>{t}</button>
@@ -1556,9 +1558,10 @@ function OnboardingScreen({ onStart }) {
             disabled={!name.trim() || !type}
             style={{
               width: "100%", padding: "14px",
-              background: name.trim() && type ? "var(--accent)" : "rgba(255,255,255,0.05)",
-              border: "none", borderRadius: 6,
-              color: name.trim() && type ? "#071827" : "var(--text-secondary)",
+              background: name.trim() && type ? "#F26751" : "rgba(255,255,255,0.04)",
+              border: name.trim() && type ? "none" : "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              color: name.trim() && type ? "#071827" : "#4A6A7A",
               fontFamily: DISPLAY, fontSize: 13, fontWeight: 700,
               cursor: name.trim() && type ? "pointer" : "not-allowed",
               letterSpacing: 0.5, transition: "all 0.2s ease"
@@ -1567,7 +1570,7 @@ function OnboardingScreen({ onStart }) {
           </button>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: 11, fontFamily: MONO, color: "var(--text-secondary)", marginTop: 20, opacity: 0.5 }}>
+        <p style={{ textAlign: "center", fontSize: 11, fontFamily: MONO, color: "#94A3B8", marginTop: 20, opacity: 0.6 }}>
           Built for Leadership. Designed for Clarity.
         </p>
       </div>
