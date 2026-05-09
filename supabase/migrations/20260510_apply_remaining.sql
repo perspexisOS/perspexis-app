@@ -51,3 +51,20 @@ DO $$ BEGIN CREATE POLICY "member_read_profiles" ON public.profiles FOR SELECT U
 DO $$ BEGIN CREATE POLICY "owner_read_logs" ON public.activity_logs FOR SELECT USING (org_id = auth.uid() OR user_id = auth.uid()); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE POLICY "member_read_org_logs" ON public.activity_logs FOR SELECT USING (org_id IN (SELECT org_owner_id FROM public.organization_members WHERE member_user_id = auth.uid() AND status = 'active')); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE POLICY "insert_own_logs" ON public.activity_logs FOR INSERT WITH CHECK (user_id = auth.uid()); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ─── Maven Conversations ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.maven_conversations (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  org_id     UUID NOT NULL,
+  messages   JSONB NOT NULL DEFAULT '[]',
+  context    JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+ALTER TABLE public.maven_conversations ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "user_own_maven" ON public.maven_conversations
+    FOR ALL USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

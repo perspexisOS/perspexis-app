@@ -2036,6 +2036,259 @@ Base question: ${field.q}`);
   );
 }
 
+
+// ─── Maven Knowledge Base ─────────────────────────────────────────────────────
+const MAVEN_KNOWLEDGE = `
+PERSPEXIS PLATFORM GUIDE — Maven's Reference
+
+LAYERS:
+• Identity Layer: Mission (why you exist), North Star Vision (20-year picture), Phase 1 Vision (1-3 year goals), Core Values (non-negotiables), Positioning (who you serve & why you're different)
+• People Layer: Org chart with role definitions, Owns field (responsibilities), Winning Looks Like field (success criteria), AI clarity grading 0-100, structural pressure point diagnosis, AI recommendations
+• Rhythm Layer: Meeting cadences (name, frequency, duration, attendees, purpose), rhythm clarity grading, communication gap analysis, AI improvement suggestions
+• Health Overview: POHI — Perspexis Organizational Health Index: 6 dimensions: Purpose Clarity, People Clarity, Operational Rhythm, Structural Integrity, Cultural Alignment, Growth Readiness
+
+AI FEATURES:
+• ✦ Ask Maven: Conversational coaching to discover and define identity elements
+• Grade This Layer: AI scores role or cadence definitions and gives specific feedback
+• Diagnose Pressure Points: AI analyzes org chart for structural problems
+• Get Recommendations: Actionable next steps based on your specific data
+• POHI Analysis: Full organizational health score with written profile narrative
+
+TEAM & SETTINGS:
+• Add users via Settings > Users > Add New User (3-step wizard)
+• Admin = full access; Limited User = custom permissions per layer
+• Permission levels: No Access / View Only / View & Modify / View, Modify & Delete
+• 2FA: Email OTP (recommended, no app needed) or Authenticator App (TOTP)
+• Activity logs in Settings > Users > User Logs
+
+TROUBLESHOOTING:
+• Data not saving: Click the save button after editing; check internet connection
+• Data missing after refresh: Re-enter your data — it will save reliably now
+• Invitation email not received: Admin can resend from Settings > Users > Resend Invite
+• 2FA code not working: Email codes expire — request a new one; for authenticator apps ensure device time is synced
+• Grade seems wrong: Grades improve when Owns and Winning Looks Like fields have specific, measurable language
+
+BEST PRACTICES:
+• Complete Identity before building People — your mission should inform how you structure your team
+• Write role Owns fields with specific outcomes, not job titles
+• Run POHI only after all three layers have meaningful content — empty layers lower scores
+• Re-grade layers after significant edits to role definitions or cadences
+• Enable 2FA for all admin users for account security
+`;
+
+// ─── Maven System Prompt Builder ──────────────────────────────────────────────
+function buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, recentHistory) {
+  const complete = [identity?.mission, people?.length > 0, rhythm?.cadences?.length > 0].filter(Boolean).length;
+  const histText = recentHistory?.length
+    ? recentHistory.slice(-8).map(m => `${m.role === 'maven' ? 'Maven' : 'User'}: ${m.text}`).join('\n\n')
+    : '';
+  return `You are Maven, the AI guide and loyal companion for Perspexis — an organizational operating system that helps businesses, churches, nonprofits, and agencies achieve organizational clarity.
+
+YOUR PERSONALITY & APPROACH:
+• Warm and welcoming — like showing a beloved client into their new home for the first time
+• Friendly and conversational, never corporate or stiff
+• Authoritative about organizational health and clarity — you know what high-performing organizations look like
+• Loyal and persistent — you remember everything about this organization and grow with it
+• Proactive — you notice trends in their data and surface insights they haven't asked for
+• Encouraging — you celebrate wins, big and small
+• Direct and specific — no fluff, no filler
+
+YOUR ROLE:
+• Primary guide and companion for Perspexis
+• Organizational clarity coach (Identity, People, Rhythm, Health)
+• Platform tour guide when users want to explore
+• Feature announcer as the platform grows
+• Troubleshooter and help desk
+• Strategic advisor who references their actual data
+
+CURRENT USER:
+Email: ${user?.email || 'Unknown'}
+Organization: ${orgName || 'Not yet set up'}
+Type: ${orgType || 'Not specified'}
+Setup Progress: ${complete}/3 layers complete
+
+IDENTITY LAYER:
+Mission: ${identity?.mission || '(not defined)'}
+North Star Vision: ${identity?.vision_north || '(not defined)'}
+Phase 1 Vision: ${identity?.vision_phase || '(not defined)'}
+Core Values: ${identity?.values?.filter(v => v.name?.trim()).map(v => v.name).join(', ') || '(not defined)'}
+Positioning: ${identity?.positioning || '(not defined)'}
+
+PEOPLE LAYER (${people?.length || 0} roles):
+${people?.length ? people.slice(0, 8).map(p => `• ${p.role}: ${p.name || '(Vacant)'}${p.vacant ? ' [VACANT]' : ''} — Owns: ${(p.owns || '').slice(0, 80)}`).join('\n') : '(no roles defined yet)'}
+${gaps && gaps !== 'diagnosing' ? `\nStructural notes: ${gaps.slice(0, 300)}` : ''}
+
+RHYTHM LAYER:
+${rhythm?.cadences?.length ? `${rhythm.cadences.length} cadences: ${rhythm.cadences.map(c => c.name).join(', ')}` : '(not set up yet)'}
+
+${MAVEN_KNOWLEDGE}
+
+${histText ? `RECENT CONVERSATION:\n${histText}\n` : ''}
+RESPONSE STYLE:
+• 2-4 sentences unless they need detailed help
+• Reference their actual data (org name, specific roles, real mission)
+• Celebrate progress naturally — don't force it
+• When giving a platform tour, include [NAVIGATE:layer] at the very start of the message to navigate them (valid layers: identity, people, rhythm, health)
+• End responses with either a question or a clear next suggestion when appropriate`;
+}
+
+// ─── Maven Chat Widget ────────────────────────────────────────────────────────
+function MavenChat({ user, orgName, orgType, identity, people, gaps, rhythm, active, setActive, isNewUser, onFirstOpen }) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [pulse, setPulse] = useState(isNewUser);
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (open) { inputRef.current?.focus(); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); } }, [open]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+
+  // Auto-open for new users
+  useEffect(() => {
+    if (isNewUser && !initialized) { setOpen(true); }
+  }, [isNewUser]);
+
+  const load = async () => {
+    if (initialized) return;
+    const { data } = await supabase.from('maven_conversations').select('messages').eq('user_id', user.id).maybeSingle();
+    if (data?.messages?.length > 0) {
+      setMessages(data.messages.slice(-40));
+      setInitialized(true);
+      setPulse(false);
+    } else {
+      await welcome(true);
+    }
+  };
+
+  useEffect(() => { if (open) load(); }, [open]);
+
+  const save = async (msgs) => {
+    await supabase.from('maven_conversations').upsert({ user_id: user.id, org_id: user.id, messages: msgs.slice(-60), updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  };
+
+  const welcome = async (isNew) => {
+    setLoading(true);
+    if (onFirstOpen) onFirstOpen();
+    const complete = [identity?.mission, people?.length > 0, rhythm?.cadences?.length > 0].filter(Boolean).length;
+    const extra = isNew
+      ? `This is the very first time this user is meeting you. Welcome them warmly to Perspexis — like welcoming a client into their new organizational home. In 2-3 warm, conversational sentences: tell them what Perspexis will do for their organization, and offer them either a guided tour of the platform or to jump right in and start building. Make them feel excited and at home.`
+      : `The user is returning. Give a warm, brief welcome back. Reference "${orgName || 'their organization'}" by name. ${complete > 0 ? `They've completed ${complete}/3 layers.` : 'They haven\'t set up any layers yet.'} Ask what they want to work on today, or proactively suggest something based on their data.`;
+    const r = await callClaude(buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, []) + '\n\n' + extra);
+    const msg = { role: 'maven', text: r, ts: Date.now() };
+    const msgs = [msg];
+    setMessages(msgs);
+    await save(msgs);
+    setInitialized(true);
+    setPulse(false);
+    setLoading(false);
+  };
+
+  const process = (text) => {
+    const m = text.match(/^\[NAVIGATE:(\w+)\]/);
+    if (m && ['identity','people','rhythm','health'].includes(m[1])) { setActive(m[1]); }
+    return text.replace(/^\[NAVIGATE:\w+\]\s?/, '');
+  };
+
+  const send = async (overrideText) => {
+    const txt = (overrideText || input).trim();
+    if (!txt || loading) return;
+    const userMsg = { role: 'user', text: txt, ts: Date.now() };
+    const newMsgs = [...messages, userMsg];
+    setMessages(newMsgs);
+    setInput('');
+    setLoading(true);
+    const extra = `\nUser is currently on: ${active} layer\n\nRespond to their last message. Be Maven.`;
+    const r = await callClaude(buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, newMsgs) + extra);
+    const clean = process(r);
+    const mavenMsg = { role: 'maven', text: clean, ts: Date.now() };
+    const final = [...newMsgs, mavenMsg];
+    setMessages(final);
+    await save(final);
+    setLoading(false);
+  };
+
+  const suggestions = [
+    !identity?.mission && 'Help me define my Identity',
+    !people?.length && 'Let\'s build my org chart',
+    !rhythm?.cadences?.length && 'Set up my Rhythm layer',
+    identity?.mission && people?.length && rhythm?.cadences?.length && 'Run a POHI health analysis',
+    'Give me a tour of Perspexis',
+  ].filter(Boolean).slice(0, 3);
+
+  const mvnBubble = { background: 'rgba(242,103,81,0.07)', border: '1px solid rgba(242,103,81,0.18)', borderRadius: '4px 14px 14px 14px', padding: '12px 16px', maxWidth: '82%' };
+  const usrBubble = { background: 'rgba(110,231,216,0.07)', border: '1px solid rgba(110,231,216,0.18)', borderRadius: '14px 4px 14px 14px', padding: '12px 16px', maxWidth: '82%', marginLeft: 'auto' };
+
+  return (
+    <>
+      {/* Floating button */}
+      <div style={{ position: 'fixed', bottom: open ? -100 : 24, right: 24, zIndex: 600, transition: 'bottom 0.3s ease' }}>
+        <button onClick={() => setOpen(true)} style={{ width: 54, height: 54, borderRadius: '50%', background: 'var(--accent)', border: '2px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 20px rgba(242,103,81,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, position: 'relative' }}>
+          ✦
+          {pulse && <div style={{ position: 'absolute', top: -3, right: -3, width: 14, height: 14, borderRadius: '50%', background: '#2EC4B6', border: '2px solid #071827', animation: 'arcFade 1.5s ease infinite' }} />}
+        </button>
+      </div>
+
+      {/* Chat panel */}
+      {open && (
+        <div style={{ position: 'fixed', bottom: 0, right: 0, width: 400, height: '100vh', background: '#0B1E2E', borderLeft: '1px solid var(--border)', zIndex: 599} className='px-maven-panel', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.4)', animation: 'fadeUp 0.25s ease both' }}>
+          {/* Header */}
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'rgba(16,37,52,0.8)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(242,103,81,0.15)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✦</div>
+              <div>
+                <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Maven</p>
+                <p style={{ fontFamily: MONO, fontSize: 8, color: loading ? '#F26751' : '#2EC4B6', margin: 0, textTransform: 'uppercase', letterSpacing: 1.5 }}>{loading ? 'Thinking...' : 'Your Perspexis Guide'}</p>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 10px', fontFamily: MONO, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1 }}>✕</button>
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'maven' ? 'flex-start' : 'flex-end' }}>
+                {m.role === 'maven' && <p style={{ fontSize: 8, fontFamily: MONO, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1.5, margin: '0 0 4px' }}>✦ Maven</p>}
+                <div style={m.role === 'maven' ? mvnBubble : usrBubble}>
+                  <p style={{ fontSize: 13, fontFamily: BODY, color: 'var(--text-primary)', margin: 0, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{m.text}</p>
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div>
+                <p style={{ fontSize: 8, fontFamily: MONO, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1.5, margin: '0 0 4px' }}>✦ Maven</p>
+                <div style={mvnBubble}><div style={{ display: 'flex', gap: 5 }}>{[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `arcFade 1.2s ease ${i*0.2}s infinite` }} />)}</div></div>
+              </div>
+            )}
+            {/* Quick suggestions */}
+            {!loading && messages.length <= 2 && suggestions.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                {suggestions.map(s => (
+                  <button key={s} onClick={() => send(s)} style={{ padding: '8px 14px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', fontFamily: BODY, fontSize: 12, cursor: 'pointer', textAlign: 'left' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0, background: 'rgba(16,37,52,0.6)' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Ask Maven anything…" rows={2} style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontFamily: BODY, fontSize: 13, outline: 'none', resize: 'none' }} />
+              <button onClick={() => send()} disabled={loading || !input.trim()} style={{ padding: '10px 14px', background: input.trim() && !loading ? 'var(--accent)' : 'rgba(255,255,255,0.04)', border: 'none', borderRadius: 8, color: input.trim() && !loading ? '#071827' : 'var(--text-secondary)', fontFamily: DISPLAY, fontSize: 10, fontWeight: 700, cursor: input.trim() && !loading ? 'pointer' : 'default' }}>→</button>
+            </div>
+            <p style={{ fontSize: 9, fontFamily: MONO, color: 'var(--text-muted)', margin: '6px 0 0', textTransform: 'uppercase', letterSpacing: 1 }}>Enter to send · Shift+Enter for new line</p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Stripe Pricing Tiers ───────────────────────────────────────────────────
 // Setup: stripe.com → Products → create Core, Growth, Scale with trial periods
 // → Payment Links → replace stripeMonthly / stripeAnnual URLs below
@@ -2516,8 +2769,10 @@ function PerspexisCore() {
         input:focus, textarea:focus { border-color: #F26751 !important; outline: none; }
         /* ─── Responsive ────────────────────────────────────── */
         .px-bottom-nav       { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 100; }
+        .px-maven-panel { width: 400px; }
         @media (max-width: 767px) {
           .px-sidebar        { display: none !important; }
+          .px-maven-panel    { width: 100% !important; }
           .px-bottom-nav     { display: flex !important; }
           .px-content        { padding: 16px 16px 80px !important; }
           .px-topnav         { padding: 8px 14px !important; }
@@ -2624,7 +2879,8 @@ function PerspexisCore() {
         </div>
       </div>
 {showPricing && <PricingPage user={user} onClose={() => setShowPricing(false)} />}
-      {tutorialStep !== null && <TutorialOverlay step={tutorialStep} onNext={advanceTutorial} onSkip={completeTutorial} />}
+      {/* Maven widget — always available */}
+      <MavenChat user={user} orgName={orgName} orgType={orgType} identity={identity} people={people} gaps={gaps} rhythm={rhythm} active={active} setActive={setActive} isNewUser={tutorialStep !== null} onFirstOpen={completeTutorial} />
       {/* Mobile bottom nav */}
       <div className="px-bottom-nav" style={{ display: "none" }}>
         {LAYERS.map(l => (
