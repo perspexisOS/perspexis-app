@@ -992,6 +992,182 @@ function TutorialOverlay({ step, onNext, onSkip }) {
   );
 }
 
+// ─── Stripe Pricing Tiers ───────────────────────────────────────────────────
+// Setup: stripe.com → Products → create Core, Growth, Scale with trial periods
+// → Payment Links → replace stripeMonthly / stripeAnnual URLs below
+const TIERS = [
+  {
+    id: "core", name: "Core", icon: "◈",
+    tagline: "Build your organizational foundation",
+    monthly: 49, annual: 39, annualTotal: 468,
+    available: true, popular: true,
+    accent: "#F26751", accentDim: "rgba(242,103,81,0.08)", accentBorder: "rgba(242,103,81,0.28)",
+    features: [
+      "Identity Layer — Mission, Vision & Values",
+      "People Layer — Roles & Accountability",
+      "Rhythm Layer — Meeting Cadences",
+      "AI Clarity Grading across all layers",
+      "POHI Organizational Health Score",
+      "Up to 5 team members",
+    ],
+    stripeMonthly: "#",  // TODO: replace with Stripe Payment Link
+    stripeAnnual:  "#",  // TODO: replace with Stripe Payment Link
+  },
+  {
+    id: "growth", name: "Growth", icon: "◎",
+    tagline: "Scale your systems and processes",
+    monthly: 99, annual: 79, annualTotal: 948,
+    available: false, popular: false,
+    accent: "#2EC4B6", accentDim: "rgba(46,196,182,0.08)", accentBorder: "rgba(46,196,182,0.25)",
+    features: [
+      "Everything in Core",
+      "Numbers Layer — KPIs & Metrics",
+      "Process Layer — SOPs & Workflows",
+      "Scale Layer — Growth Planning",
+      "Advanced AI Analysis",
+      "Up to 25 team members",
+    ],
+    stripeMonthly: null, stripeAnnual: null,
+  },
+  {
+    id: "scale", name: "Scale", icon: "◇",
+    tagline: "Enterprise-grade organizational clarity",
+    monthly: 199, annual: 159, annualTotal: 1908,
+    available: false, popular: false,
+    accent: "#A87EC8", accentDim: "rgba(168,126,200,0.08)", accentBorder: "rgba(168,126,200,0.25)",
+    features: [
+      "Everything in Growth",
+      "Multi-location Management",
+      "Custom Reporting & Exports",
+      "White-label Options",
+      "Priority Support & Onboarding",
+      "Unlimited team members",
+    ],
+    stripeMonthly: null, stripeAnnual: null,
+  },
+];
+
+function PricingPage({ standalone, user, onClose }) {
+  const [annual, setAnnual] = useState(false);
+
+  const handleCTA = (tier) => {
+    if (!tier.available || !tier.stripeMonthly) return;
+    const base = annual ? tier.stripeAnnual : tier.stripeMonthly;
+    if (!base || base === "#") return;
+    try {
+      const url = new URL(base);
+      if (user?.email) url.searchParams.set("prefilled_email", user.email);
+      if (user?.id) url.searchParams.set("client_reference_id", user.id);
+      window.open(url.toString(), "_blank");
+    } catch { window.open(base, "_blank"); }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#071827", color: "#F5F7FA", fontFamily: DISPLAY, overflowX: "hidden" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+        * { box-sizing: border-box; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .px-tier-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .px-tier-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        @media (max-width: 767px) {
+          .px-pricing-grid { grid-template-columns: 1fr !important; }
+          .px-pricing-hero h1 { font-size: 28px !important; }
+          .px-pricing-nav { padding: 12px 16px !important; }
+        }
+      `}</style>
+
+      {/* Nav */}
+      <div className="px-pricing-nav" style={{ padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #243746", background: "rgba(16,37,52,0.7)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <PerspexisIcon size={26} />
+          <span style={{ fontFamily: MONO, fontSize: 12, letterSpacing: 1, color: "#F5F7FA" }}>perspexis</span>
+        </div>
+        {standalone
+          ? <button onClick={() => window.location.href = "/"} style={{ padding: "7px 18px", background: "#F26751", border: "none", borderRadius: 5, color: "#071827", fontFamily: DISPLAY, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer" }}>Sign In →</button>
+          : <button onClick={onClose} style={{ padding: "6px 14px", background: "transparent", border: "1px solid #243746", borderRadius: 5, color: "#94A3B8", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1, cursor: "pointer" }}>← Back to App</button>
+        }
+      </div>
+
+      {/* Hero */}
+      <div className="px-pricing-hero" style={{ textAlign: "center", padding: "60px 24px 44px", animation: "fadeUp 0.4s ease both" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 16px", background: "rgba(46,196,182,0.08)", border: "1px solid rgba(46,196,182,0.2)", borderRadius: 20, marginBottom: 24 }}>
+          <span style={{ fontSize: 9, fontFamily: MONO, color: "#2EC4B6", textTransform: "uppercase", letterSpacing: 2 }}>7-Day Free Trial Included</span>
+        </div>
+        <h1 style={{ fontSize: 42, fontWeight: 700, letterSpacing: -1, margin: "0 0 14px", lineHeight: 1.15, color: "#F5F7FA" }}>Simple, transparent pricing.</h1>
+        <p style={{ fontSize: 15, color: "#94A3B8", margin: 0, fontFamily: BODY, lineHeight: 1.8 }}>
+          Build organizational clarity at every stage of growth.<br />Start free. Upgrade when you're ready.
+        </p>
+      </div>
+
+      {/* Billing toggle */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 14, marginBottom: 44 }}>
+        <span style={{ fontSize: 11, fontFamily: MONO, color: annual ? "#94A3B8" : "#F5F7FA", textTransform: "uppercase", letterSpacing: 1, transition: "color 0.2s" }}>Monthly</span>
+        <button onClick={() => setAnnual(a => !a)} style={{ width: 46, height: 24, borderRadius: 12, background: annual ? "#F26751" : "#243746", border: "none", cursor: "pointer", position: "relative", transition: "background 0.25s", flexShrink: 0 }}>
+          <div style={{ position: "absolute", top: 3, left: annual ? 25 : 3, width: 18, height: 18, borderRadius: "50%", background: "#F5F7FA", transition: "left 0.25s ease" }} />
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, fontFamily: MONO, color: annual ? "#F5F7FA" : "#94A3B8", textTransform: "uppercase", letterSpacing: 1, transition: "color 0.2s" }}>Annual</span>
+          {annual && <span style={{ padding: "2px 8px", background: "rgba(242,103,81,0.12)", border: "1px solid rgba(242,103,81,0.3)", borderRadius: 10, fontSize: 9, fontFamily: MONO, color: "#F26751", textTransform: "uppercase", letterSpacing: 1 }}>Save 20%</span>}
+        </div>
+      </div>
+
+      {/* Tier cards */}
+      <div className="px-pricing-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, maxWidth: 980, margin: "0 auto 56px", padding: "0 24px" }}>
+        {TIERS.map((tier, i) => (
+          <div key={tier.id} className="px-tier-card" style={{ position: "relative", background: "#102534", border: `1px solid ${tier.popular ? tier.accentBorder : "#243746"}`, borderTop: `3px solid ${tier.accent}`, borderRadius: 12, padding: "32px 26px", animation: `fadeUp 0.4s ease ${i * 80}ms both` }}>
+            {tier.popular && <div style={{ position: "absolute", top: 0, right: 20, transform: "translateY(-50%)", padding: "3px 10px", background: tier.accent, borderRadius: 10, fontSize: 8, fontFamily: MONO, color: "#071827", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Most Popular</div>}
+            {!tier.available && (
+              <div style={{ position: "absolute", inset: 0, borderRadius: 12, background: "rgba(7,24,39,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>
+                <span style={{ padding: "6px 18px", background: "#102534", border: "1px solid #243746", borderRadius: 20, fontSize: 9, fontFamily: MONO, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 2 }}>Coming Soon</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: 18, color: tier.accent }}>{tier.icon}</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#F5F7FA" }}>{tier.name}</span>
+            </div>
+            <p style={{ fontSize: 12, color: "#94A3B8", margin: "0 0 22px", fontFamily: BODY, lineHeight: 1.5 }}>{tier.tagline}</p>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 4 }}>
+              <span style={{ fontSize: 38, fontWeight: 700, fontFamily: MONO, color: "#F5F7FA", lineHeight: 1 }}>${annual ? tier.annual : tier.monthly}</span>
+              <span style={{ fontSize: 12, color: "#94A3B8", fontFamily: MONO }}>/mo</span>
+            </div>
+            <p style={{ fontSize: 10, fontFamily: MONO, color: "#94A3B8", margin: "0 0 24px" }}>
+              {annual
+                ? <span>billed ${tier.annualTotal}/yr · <span style={{ color: "#F26751" }}>save ${tier.monthly * 12 - tier.annualTotal}/yr</span></span>
+                : "billed monthly · cancel anytime"
+              }
+            </p>
+
+            <button onClick={() => handleCTA(tier)} disabled={!tier.available} style={{ width: "100%", padding: "11px", marginBottom: 22, background: tier.available ? tier.accent : "transparent", border: tier.available ? "none" : "1px solid #243746", borderRadius: 6, color: tier.available ? "#071827" : "#94A3B8", fontFamily: DISPLAY, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, cursor: tier.available ? "pointer" : "default" }}>
+              {tier.available ? "Start 7-Day Free Trial →" : "Coming Soon"}
+            </button>
+
+            <div style={{ borderTop: "1px solid #243746", paddingTop: 18 }}>
+              <p style={{ fontSize: 9, fontFamily: MONO, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 12px" }}>What's included</p>
+              {tier.features.map((f, fi) => (
+                <div key={fi} style={{ display: "flex", gap: 9, alignItems: "flex-start", marginBottom: 9 }}>
+                  <span style={{ fontSize: 10, color: tier.accent, flexShrink: 0, marginTop: 2 }}>✓</span>
+                  <span style={{ fontSize: 12, color: "#F5F7FA", fontFamily: BODY, lineHeight: 1.5 }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div style={{ textAlign: "center", padding: "0 24px 60px" }}>
+        <p style={{ fontSize: 12, color: "#94A3B8", fontFamily: BODY, margin: "0 0 6px" }}>All plans include a 7-day free trial. Cancel or change plans at any time.</p>
+        <p style={{ fontSize: 12, color: "#94A3B8", fontFamily: BODY, margin: 0 }}>
+          Questions? <a href="mailto:cody@perspexis.com" style={{ color: "#F26751", textDecoration: "none" }}>cody@perspexis.com</a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Spinner({ label, large, medium }) {
   // ── Large: full branded loader with rotating arc + icon + text ──────────
   if (large) {
@@ -1056,7 +1232,7 @@ function Spinner({ label, large, medium }) {
 
 
 // ─── Auth Screen ────────────────────────────────────────────────────────────
-export default function PerspexisCore() {
+function PerspexisCore() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [onboarded, setOnboarded] = useState(false);
@@ -1070,6 +1246,7 @@ export default function PerspexisCore() {
   const [rhythmMode, setRhythmMode] = useState("setup");
   const [dataLoading, setDataLoading] = useState(false);
   const [peopleStarted, setPeopleStarted] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(null);
 
   // ── Auth state listener ──────────────────────────────────────────────────
@@ -1327,7 +1504,7 @@ export default function PerspexisCore() {
           <div style={{ position: "absolute", bottom: 16, left: 10, right: 10, padding: "13px 12px", background: "rgba(46,196,182,0.03)", border: "1px solid rgba(46,196,182,0.1)", borderRadius: 8 }}>
             <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 5px" }}>Next Tier</p>
             <p style={{ fontSize: 10, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.5, fontFamily: DISPLAY }}>Numbers, Process & Growth</p>
-            <div style={{ padding: "7px", background: "var(--accent-dim)", border: "1px solid rgba(228,131,34,0.15)", borderRadius: 3, textAlign: "center", cursor: "pointer" }}>
+            <div onClick={() => setShowPricing(true)} style={{ padding: "7px", background: "var(--accent-dim)", border: "1px solid rgba(228,131,34,0.15)", borderRadius: 3, textAlign: "center", cursor: "pointer" }}>
               <span style={{ fontSize: 8, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1.5 }}>Upgrade to Growth →</span>
             </div>
           </div>
@@ -1365,7 +1542,8 @@ export default function PerspexisCore() {
           ))}
         </div>
       </div>
-{tutorialStep !== null && <TutorialOverlay step={tutorialStep} onNext={advanceTutorial} onSkip={completeTutorial} />}
+{showPricing && <PricingPage user={user} onClose={() => setShowPricing(false)} />}
+      {tutorialStep !== null && <TutorialOverlay step={tutorialStep} onNext={advanceTutorial} onSkip={completeTutorial} />}
       {/* Mobile bottom nav */}
       <div className="px-bottom-nav" style={{ display: "none" }}>
         {LAYERS.map(l => (
@@ -1500,6 +1678,9 @@ function AuthScreen({ onAuth }) {
             {mode === "login" && (<><button onClick={() => setMode("signup")} style={{ background: "none", border: "none", color: "#F26751", fontFamily: BODY, fontSize: 13, cursor: "pointer" }}>Don't have an account? Sign up</button><button onClick={() => setMode("reset")} style={{ background: "none", border: "none", color: "#94A3B8", fontFamily: BODY, fontSize: 12, cursor: "pointer" }}>Forgot password?</button></>)}
             {mode !== "login" && <button onClick={() => setMode("login")} style={{ background: "none", border: "none", color: "#F26751", fontFamily: BODY, fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
           </div>
+          <div style={{ textAlign: "center", marginTop: 24, paddingTop: 18, borderTop: "1px solid #243746" }}>
+            <a href="/pricing" style={{ fontSize: 10, fontFamily: MONO, color: "#94A3B8", textDecoration: "none", textTransform: "uppercase", letterSpacing: 1.5 }}>View Pricing & Plans →</a>
+          </div>
         </div>
       </div>
     </div>
@@ -1568,6 +1749,11 @@ function PerspexisIcon({ size = 48 }) {
     </svg>
   );
 }
+export default function App() {
+  if (window.location.pathname === "/pricing") return <PricingPage standalone />;
+  return <PerspexisCore />;
+}
+
 // ─── Onboarding Welcome Screen ─────────────────────────────────────────────
 function OnboardingScreen({ onStart }) {
   const [name, setName] = useState("");
