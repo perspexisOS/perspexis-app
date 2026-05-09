@@ -1,5 +1,4 @@
 -- ─── Multi-User / Team Membership ─────────────────────────────────────────────
--- Run this in the Supabase SQL Editor (Project → SQL Editor → New Query)
 
 -- 1. Create organization_members table
 CREATE TABLE IF NOT EXISTS public.organization_members (
@@ -18,68 +17,66 @@ CREATE TABLE IF NOT EXISTS public.organization_members (
 -- 2. Enable RLS
 ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
 
--- 3. Org owner can do everything with their members
-CREATE POLICY "owner_full_access" ON public.organization_members
-  FOR ALL USING (org_owner_id = auth.uid());
+-- 3. Policies (idempotent via DO blocks)
+DO $$ BEGIN
+  CREATE POLICY "owner_full_access" ON public.organization_members
+    FOR ALL USING (org_owner_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- 4. Member can read their own record
-CREATE POLICY "member_read_own" ON public.organization_members
-  FOR SELECT USING (member_user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "member_read_own" ON public.organization_members
+    FOR SELECT USING (member_user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- 5. Allow pending invite acceptance by email match (for InviteAcceptPage)
-CREATE POLICY "accept_invite_by_email" ON public.organization_members
-  FOR UPDATE USING (
-    email = (SELECT email FROM auth.users WHERE id = auth.uid())
-    AND status = 'pending'
-  );
+DO $$ BEGIN
+  CREATE POLICY "accept_invite_by_email" ON public.organization_members
+    FOR UPDATE USING (
+      email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      AND status = 'pending'
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- 6. Allow members to read org data (identity, people, rhythm, profiles)
---    These policies ADD to the existing owner-only policies.
+-- 4. Member read access to org data tables
+DO $$ BEGIN
+  CREATE POLICY "member_read_identity" ON public.identity
+    FOR SELECT USING (
+      user_id = auth.uid()
+      OR user_id IN (
+        SELECT org_owner_id FROM public.organization_members
+        WHERE member_user_id = auth.uid() AND status = 'active'
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- identity
-CREATE POLICY "member_read_identity" ON public.identity
-  FOR SELECT USING (
-    user_id = auth.uid()
-    OR user_id IN (
-      SELECT org_owner_id FROM public.organization_members
-      WHERE member_user_id = auth.uid() AND status = 'active'
-    )
-  );
+DO $$ BEGIN
+  CREATE POLICY "member_read_people" ON public.people
+    FOR SELECT USING (
+      user_id = auth.uid()
+      OR user_id IN (
+        SELECT org_owner_id FROM public.organization_members
+        WHERE member_user_id = auth.uid() AND status = 'active'
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- people
-CREATE POLICY "member_read_people" ON public.people
-  FOR SELECT USING (
-    user_id = auth.uid()
-    OR user_id IN (
-      SELECT org_owner_id FROM public.organization_members
-      WHERE member_user_id = auth.uid() AND status = 'active'
-    )
-  );
+DO $$ BEGIN
+  CREATE POLICY "member_read_rhythm" ON public.rhythm
+    FOR SELECT USING (
+      user_id = auth.uid()
+      OR user_id IN (
+        SELECT org_owner_id FROM public.organization_members
+        WHERE member_user_id = auth.uid() AND status = 'active'
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- rhythm
-CREATE POLICY "member_read_rhythm" ON public.rhythm
-  FOR SELECT USING (
-    user_id = auth.uid()
-    OR user_id IN (
-      SELECT org_owner_id FROM public.organization_members
-      WHERE member_user_id = auth.uid() AND status = 'active'
-    )
-  );
-
--- profiles
-CREATE POLICY "member_read_profiles" ON public.profiles
-  FOR SELECT USING (
-    id = auth.uid()
-    OR id IN (
-      SELECT org_owner_id FROM public.organization_members
-      WHERE member_user_id = auth.uid() AND status = 'active'
-    )
-  );
-
--- ─── Edge Function: SITE_URL env var ──────────────────────────────────────────
--- After running this SQL, go to:
--- Supabase → Project Settings → Edge Functions → Secrets
--- Add: SITE_URL = https://your-deployed-app-url.com
---
--- Then deploy the Edge Function:
---   npx supabase functions deploy invite-user --project-ref YOUR_PROJECT_REF
+DO $$ BEGIN
+  CREATE POLICY "member_read_profiles" ON public.profiles
+    FOR SELECT USING (
+      id = auth.uid()
+      OR id IN (
+        SELECT org_owner_id FROM public.organization_members
+        WHERE member_user_id = auth.uid() AND status = 'active'
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
