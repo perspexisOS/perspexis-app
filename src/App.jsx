@@ -294,7 +294,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
 
   const startEdit = (p) => {
     const isVacant = p.vacant === true || p.type === "vacant";
-    setEditDraft({ _orig: p.role, name: p.name || "", role: p.role, type: isVacant ? "leader" : (p.type || "leader"), owns: p.owns || "", winning: p.winning || "", reports: p.reports || "", vacant: isVacant });
+    setEditDraft({ _orig: p.role, name: isVacant ? (p.name || "(Vacant)") : (p.name || ""), role: p.role, type: isVacant ? "leader" : (p.type || "leader"), owns: p.owns || "", winning: p.winning || "", reports: p.reports || "", vacant: isVacant });
   };
   const saveEdit = () => {
     if (!editDraft) return;
@@ -450,7 +450,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 10 }} className="px-grid-2">
                         <div><Label>Name</Label><input value={editDraft.name} onChange={e => setEditDraft(d => ({...d, name: e.target.value}))} disabled={editDraft.vacant} placeholder={editDraft.vacant ? "(Vacant — no assignee)" : "Full name"} style={{...inpStyle, opacity: editDraft.vacant ? 0.45 : 1}} /></div>
-                        <div style={{ display: "flex", alignItems: "flex-end" }}><label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "9px 0" }}><input type="checkbox" checked={editDraft.vacant || false} onChange={e => setEditDraft(d => ({...d, vacant: e.target.checked, name: e.target.checked ? "" : d.name}))} style={{ accentColor: "#CC5A4A", width: 14, height: 14 }} /><span style={{ fontSize: 10, fontFamily: MONO, color: "#CC5A4A", textTransform: "uppercase", letterSpacing: 1 }}>Vacant</span></label></div>
+                        <div style={{ display: "flex", alignItems: "flex-end" }}><label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "9px 0" }}><input type="checkbox" checked={editDraft.vacant || false} onChange={e => setEditDraft(d => ({...d, vacant: e.target.checked, name: e.target.checked ? "(Vacant)" : ""}))} style={{ accentColor: "#CC5A4A", width: 14, height: 14 }} /><span style={{ fontSize: 10, fontFamily: MONO, color: "#CC5A4A", textTransform: "uppercase", letterSpacing: 1 }}>Vacant</span></label></div>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 10 }} className="px-grid-2">
                         <div><Label>Role Title</Label><input value={editDraft.role} onChange={e => setEditDraft(d => ({...d, role: e.target.value}))} style={inpStyle} /></div>
