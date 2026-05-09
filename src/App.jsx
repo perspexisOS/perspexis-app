@@ -1419,8 +1419,9 @@ function AuthScreen({ onAuth }) {
       {/* Right panel — auth form */}
       <div className="px-auth-right" style={{ width: 480, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", animation: "fadeUp 0.4s ease 0.1s both" }}>
         <div style={{ width: "100%" }}>
-          <div className="px-show-mobile" style={{ display: "none", justifyContent: "center", marginBottom: 28 }}>
+          <div className="px-show-mobile" style={{ display: "none", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
             <PerspexisLogo height={120} />
+            <p style={{ fontFamily: MONO, fontSize: 9, color: "#F26751", textTransform: "uppercase", letterSpacing: 2.5, margin: "8px 0 0", textAlign: "center" }}>Clarity. Alignment. Momentum.</p>
           </div>
           <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, color: "#F5F7FA", margin: "0 0 6px" }}>
             {mode === "login" ? "Welcome back." : mode === "signup" ? "Create your account." : "Reset your password."}
