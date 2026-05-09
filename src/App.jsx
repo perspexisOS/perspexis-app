@@ -961,6 +961,37 @@ const LAYERS = [
   { id: "rhythm", label: "Rhythm", icon: "◇", desc: "Meeting cadences" },
 ];
 
+const TUTORIAL_STEPS = [
+  { icon: "◈  ◎  ◇", title: "Welcome to Perspexis", body: "Your organizational operating system is ready. Let's take a quick tour of the three layers that define how your organization thinks, works, and wins.", layer: null },
+  { icon: "◈", title: "Identity Layer", body: "Define your mission, vision, values, and positioning. This is the foundation everything else is built on — start here and get clear on what you believe and where you're going.", layer: "identity" },
+  { icon: "◎", title: "People Layer", body: "Map your team, define ownership for every role, and get AI-powered clarity grades. Know who owns what — and where accountability is missing or unclear.", layer: "people" },
+  { icon: "◇", title: "Rhythm Layer", body: "Define your meeting cadences and communication rhythms. Get AI feedback on frequency, duration, and purpose. Healthy organizations run on healthy rhythms.", layer: "rhythm" },
+  { icon: "◉", title: "Organizational Health", body: "Once your layers are built, run a POHI analysis — a 6-dimension health score powered by Perspexis AI. This is your north star for measuring organizational clarity.", layer: "health" },
+];
+
+function TutorialOverlay({ step, onNext, onSkip }) {
+  const s = TUTORIAL_STEPS[step];
+  const isLast = step === TUTORIAL_STEPS.length - 1;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(7,24,39,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, backdropFilter: "blur(4px)" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 14, padding: "40px 44px", maxWidth: 480, width: "90%", animation: "fadeUp 0.3s ease both", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
+        <div style={{ fontSize: 28, marginBottom: 18, textAlign: "center", color: "var(--accent)", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: 8 }}>{s.icon}</div>
+        <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 12px", textAlign: "center" }}>{s.title}</h2>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.75, margin: "0 0 32px", textAlign: "center" }}>{s.body}</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 28 }}>
+          {TUTORIAL_STEPS.map((_, i) => (
+            <div key={i} style={{ width: i === step ? 22 : 6, height: 6, borderRadius: 3, background: i === step ? "var(--accent)" : "var(--border)", transition: "all 0.3s ease" }} />
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Btn secondary small onClick={onSkip}>Skip Tutorial</Btn>
+          <Btn onClick={onNext}>{isLast ? "Start Building →" : "Next →"}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Spinner({ label, large, medium }) {
   // ── Large: full branded loader with rotating arc + icon + text ──────────
   if (large) {
@@ -1039,6 +1070,7 @@ export default function PerspexisCore() {
   const [rhythmMode, setRhythmMode] = useState("setup");
   const [dataLoading, setDataLoading] = useState(false);
   const [peopleStarted, setPeopleStarted] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(null);
 
   // ── Auth state listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1063,7 +1095,7 @@ export default function PerspexisCore() {
         supabase.from("people").select("*").eq("user_id", user.id).single(),
         supabase.from("rhythm").select("*").eq("user_id", user.id).single(),
       ]);
-      if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOnboarded(true); }
+      if (profileRes.data?.org_name) { setOrgName(profileRes.data.org_name); setOnboarded(true); if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0); }
       if (identityRes.data) { setIdentity({ mission: identityRes.data.mission, guiding: identityRes.data.guiding, vision_north: identityRes.data.vision_north, vision_phase: identityRes.data.vision_phase, values: identityRes.data.values, positioning: identityRes.data.positioning }); setIdentityMode("view"); }
       if (peopleRes.data?.roles) { setPeople(peopleRes.data.roles); setGaps(peopleRes.data.gaps || ""); }
       if (rhythmRes.data) { setRhythm({ current: rhythmRes.data.current_state, cadences: rhythmRes.data.cadences, breaks: rhythmRes.data.breaks }); setRhythmMode("view"); }
@@ -1089,6 +1121,7 @@ export default function PerspexisCore() {
     setOrgName(name); setOnboarded(true); setIdentityMode("setup");
     await supabase.from("profiles").update({ org_name: name, org_type: type }).eq("id", user.id);
     await logActivity("Onboarding completed", "onboarding", `${name} (${type})`);
+    if (!localStorage.getItem(`px_tutorial_${user.id}`)) setTutorialStep(0);
   };
 
   const savePeople = async (newPeople, newGaps) => {
@@ -1122,6 +1155,17 @@ export default function PerspexisCore() {
   const updateGaps = (newGaps) => {
     setGaps(newGaps);
     if (newGaps !== "diagnosing") savePeople(people, newGaps);
+  };
+
+  const completeTutorial = () => {
+    localStorage.setItem(`px_tutorial_${user.id}`, "1");
+    setTutorialStep(null);
+  };
+  const advanceTutorial = () => {
+    const next = tutorialStep + 1;
+    if (next >= TUTORIAL_STEPS.length) { completeTutorial(); return; }
+    if (TUTORIAL_STEPS[next].layer) setActive(TUTORIAL_STEPS[next].layer);
+    setTutorialStep(next);
   };
 
   const updateRhythm = (updated) => { saveRhythm(updated); };
@@ -1321,6 +1365,7 @@ export default function PerspexisCore() {
           ))}
         </div>
       </div>
+{tutorialStep !== null && <TutorialOverlay step={tutorialStep} onNext={advanceTutorial} onSkip={completeTutorial} />}
       {/* Mobile bottom nav */}
       <div className="px-bottom-nav" style={{ display: "none" }}>
         {LAYERS.map(l => (
