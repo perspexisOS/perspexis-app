@@ -1070,7 +1070,7 @@ function InviteAcceptPage({ user, onAccepted }) {
       agreed_to_terms_at: new Date().toISOString(),
       joined_at: new Date().toISOString(),
     }).eq("email", user.email).eq("status", "pending");
-    onAccepted();
+    setStep("success"); setLoading(false);
   };
 
   const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid #243746", borderRadius: 6, color: "#F5F7FA", fontFamily: "'Inter', sans-serif", fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 };
@@ -1087,7 +1087,14 @@ function InviteAcceptPage({ user, onAccepted }) {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#F5F7FA", margin: "0 0 4px" }}>You've been invited to Perspexis</h2>
           <p style={{ fontSize: 13, fontFamily: "'Inter', sans-serif", color: "#94A3B8", margin: "0 0 24px" }}>Signing in as <strong style={{ color: "#F5F7FA" }}>{user.email}</strong></p>
 
-          {step === "agreement" ? (
+          {step === "success" ? (
+            <div style={{ textAlign: "center", padding: "8px 0" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#F5F7FA", margin: "0 0 10px" }}>You're all set!</h3>
+              <p style={{ fontSize: 13, fontFamily: "'Inter', sans-serif", color: "#94A3B8", margin: "0 0 28px", lineHeight: 1.65 }}>Your password is created and you've agreed to the User Agreement. Sign in to access your organization's Perspexis OS.</p>
+              <Btn onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}>Sign In to Perspexis →</Btn>
+            </div>
+          ) : step === "agreement" ? (
             <div>
               <p style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: "#F26751", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 8px" }}>User Agreement</p>
               <div style={{ height: 220, overflowY: "auto", background: "rgba(0,0,0,0.25)", border: "1px solid #243746", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
@@ -1168,12 +1175,13 @@ function TeamPanel({ user, orgOwnerId, orgName, onClose }) {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
             <span style={{ fontSize: 20, color: "var(--accent)" }}>◈◎</span>
-            <h1 style={{ fontSize: 22, fontFamily: DISPLAY, fontWeight: 700, margin: 0, letterSpacing: -0.3, color: "var(--text-primary)" }}>Team Members</h1>
+            <h1 style={{ fontSize: 22, fontFamily: DISPLAY, fontWeight: 700, margin: 0, letterSpacing: -0.3, color: "var(--text-primary)" }}>Users</h1>
           </div>
           <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0, fontFamily: DISPLAY, opacity: 0.7 }}>Manage who has access to {orgName}'s operating system</p>
         </div>
-        <Btn small onClick={() => setShowForm(f => !f)}>+ Invite User</Btn>
+        <Btn small onClick={() => setShowWizard(true)}>+ Add New User</Btn>
       </div>
+      {showWizard && <AddUserWizard orgOwnerId={orgOwnerId} orgName={orgName} onComplete={() => { setShowWizard(false); notify("Invitation sent!"); loadMembers(); }} onClose={() => setShowWizard(false)} />}
 
       {showForm && (
         <Animated delay={0}>
@@ -1242,18 +1250,20 @@ function TeamPanel({ user, orgOwnerId, orgName, onClose }) {
 
 
 // ─── Permissions Config ───────────────────────────────────────────────────────
-const PERMISSIONS_CONFIG = [
-  { section: "Identity Layer", key: "identity", actions: [{ key: "view", label: "View" }, { key: "edit", label: "Edit" }] },
-  { section: "People Layer",   key: "people",   actions: [{ key: "view", label: "View" }, { key: "edit", label: "Edit Roles" }, { key: "delete", label: "Delete Roles" }] },
-  { section: "Rhythm Layer",   key: "rhythm",   actions: [{ key: "view", label: "View" }, { key: "edit", label: "Edit Cadences" }] },
-  { section: "Health / POHI",  key: "health",   actions: [{ key: "view", label: "View" }, { key: "analyze", label: "Run Analysis" }] },
-  { section: "AI Features",    key: "ai",       actions: [{ key: "grade", label: "Grade Layers" }, { key: "recommend", label: "Recommendations" }, { key: "diagnose", label: "Diagnose Gaps" }] },
-  { section: "Team Management",key: "team",     actions: [{ key: "view", label: "View Team" }, { key: "invite", label: "Invite Users" }, { key: "revoke", label: "Revoke Access" }] },
+const PERMISSION_SECTIONS = [
+  { key: "identity", label: "Identity Layer", desc: "Mission, vision & values", canDelete: false },
+  { key: "people",   label: "People Layer",   desc: "Roles & org chart",         canDelete: true  },
+  { key: "rhythm",   label: "Rhythm Layer",   desc: "Meeting cadences",           canDelete: true  },
+  { key: "health",   label: "Health / POHI",  desc: "Organizational health score",canDelete: false },
+  { key: "ai",       label: "AI Features",    desc: "Grading & recommendations",  canDelete: false },
+  { key: "team",     label: "Team Management",desc: "Users & invitations",        canDelete: true  },
 ];
+// Permission levels: null = no access, "view" = read, "modify" = read+write, "delete" = read+write+delete
 const DEFAULT_PERMISSIONS = {
-  member: { identity:{view:true,edit:false}, people:{view:true,edit:false,delete:false}, rhythm:{view:true,edit:false}, health:{view:true,analyze:false}, ai:{grade:false,recommend:false,diagnose:false}, team:{view:false,invite:false,revoke:false} },
-  admin:  { identity:{view:true,edit:true},  people:{view:true,edit:true,delete:true},   rhythm:{view:true,edit:true},  health:{view:true,analyze:true},  ai:{grade:true,recommend:true,diagnose:true},   team:{view:true,invite:true,revoke:true} },
+  admin:  { identity:"delete", people:"delete", rhythm:"delete", health:"modify", ai:"modify", team:"delete" },
+  member: { identity:"view",   people:"view",   rhythm:"view",   health:"view",   ai:null,     team:null    },
 };
+const PERMISSIONS_CONFIG = PERMISSION_SECTIONS; // alias for any remaining references
 
 // ─── Permissions Modal ────────────────────────────────────────────────────────
 function PermissionsModal({ member, onSave, onClose }) {
@@ -1261,41 +1271,45 @@ function PermissionsModal({ member, onSave, onClose }) {
     if (member.permissions && Object.keys(member.permissions).length > 0) return member.permissions;
     return DEFAULT_PERMISSIONS[member.role] || DEFAULT_PERMISSIONS.member;
   });
-  const toggle = (section, action) => setPerms(p => ({ ...p, [section]: { ...p[section], [action]: !p[section]?.[action] } }));
-  const setAll = (section, val) => setPerms(p => { const actions = {}; PERMISSIONS_CONFIG.find(c => c.key === section)?.actions.forEach(a => { actions[a.key] = val; }); return { ...p, [section]: actions }; });
-  const inp = { border: "none", padding: 0, margin: 0, cursor: "pointer" };
+  const levelLabel = { null: "No Access", view: "View Only", modify: "View & Modify", delete: "View, Modify & Delete" };
+  const levelColor = { null: "#94A3B8", view: "#6EE7D8", modify: "#F26751", delete: "#CC5A4A" };
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(7,24,39,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400, backdropFilter: "blur(4px)" }}>
-      <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 14, padding: "32px 36px", maxWidth: 540, width: "92%", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 14, padding: "32px 36px", maxWidth: 560, width: "92%", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <h3 style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px" }}>Manage Permissions</h3>
             <p style={{ fontFamily: MONO, fontSize: 11, color: "var(--text-secondary)", margin: 0 }}>{member.email}</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Btn secondary small onClick={() => setPerms(DEFAULT_PERMISSIONS.member)}>Reset to Member</Btn>
-            <Btn secondary small onClick={() => setPerms(DEFAULT_PERMISSIONS.admin)}>Set to Admin</Btn>
+            <Btn secondary small onClick={() => setPerms(DEFAULT_PERMISSIONS.member)}>Member Defaults</Btn>
+            <Btn secondary small onClick={() => setPerms(DEFAULT_PERMISSIONS.admin)}>Full Admin</Btn>
           </div>
         </div>
-        {PERMISSIONS_CONFIG.map(section => (
-          <div key={section.key} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <Label>{section.section}</Label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setAll(section.key, true)} style={{ ...inp, fontSize: 9, fontFamily: MONO, color: "var(--teal)", textTransform: "uppercase", letterSpacing: 1, background: "none" }}>All</button>
-                <button onClick={() => setAll(section.key, false)} style={{ ...inp, fontSize: 9, fontFamily: MONO, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, background: "none" }}>None</button>
+        {PERMISSION_SECTIONS.map(section => {
+          const levels = ["No Access", "View Only", "View & Modify", ...(section.canDelete ? ["View, Modify & Delete"] : [])];
+          const vals   = [null, "view", "modify", ...(section.canDelete ? ["delete"] : [])];
+          const cur = perms[section.key] ?? null;
+          return (
+            <div key={section.key} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--border)" }}>
+              <div style={{ marginBottom: 10 }}>
+                <p style={{ fontSize: 11, fontFamily: MONO, color: levelColor[String(cur)] || "#94A3B8", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 2px" }}>{section.label}</p>
+                <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: BODY, margin: 0 }}>{section.desc}</p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {levels.map((label, i) => {
+                  const val = vals[i];
+                  const active = cur === val || (val === null && cur === null);
+                  return (
+                    <button key={label} onClick={() => setPerms(p => ({ ...p, [section.key]: val }))} style={{ padding: "6px 14px", background: active ? `${levelColor[String(val)]}18` : "transparent", border: `1px solid ${active ? levelColor[String(val)] : "var(--border)"}`, borderRadius: 6, color: active ? levelColor[String(val)] : "var(--text-secondary)", fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {section.actions.map(action => (
-                <label key={action.key} style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", padding: "6px 12px", background: perms[section.key]?.[action.key] ? "rgba(242,103,81,0.1)" : "rgba(255,255,255,0.03)", border: `1px solid ${perms[section.key]?.[action.key] ? "var(--accent-border)" : "var(--border)"}`, borderRadius: 6 }}>
-                  <input type="checkbox" checked={perms[section.key]?.[action.key] ?? false} onChange={() => toggle(section.key, action.key)} style={{ accentColor: "#F26751", width: 13, height: 13 }} />
-                  <span style={{ fontSize: 11, fontFamily: MONO, color: perms[section.key]?.[action.key] ? "var(--accent)" : "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5 }}>{action.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
           <Btn secondary small onClick={onClose}>Cancel</Btn>
           <Btn onClick={() => onSave(perms)}>Save Permissions ✓</Btn>
@@ -1369,6 +1383,8 @@ function ActivityLogsView({ orgOwnerId }) {
 
 // ─── Security / 2FA Settings ──────────────────────────────────────────────────
 function SecuritySettings({ user }) {
+  const meta = user?.user_metadata || {};
+  const emailOtpEnabled = meta.two_fa_enabled && meta.two_fa_method === "email";
   const [factors, setFactors] = useState([]);
   const [qrCode, setQrCode] = useState(null);
   const [secret, setSecret] = useState(null);
@@ -1378,23 +1394,25 @@ function SecuritySettings({ user }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const inp = { width: "100%", maxWidth: 200, padding: "10px 13px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: MONO, fontSize: 18, outline: "none", letterSpacing: 6, textAlign: "center", boxSizing: "border-box" };
+  const codeInp = { width: "100%", maxWidth: 200, padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: MONO, fontSize: 22, outline: "none", letterSpacing: 8, textAlign: "center", boxSizing: "border-box" };
 
-  const loadFactors = async () => {
-    const { data } = await supabase.auth.mfa.listFactors();
-    setFactors(data?.totp || []);
-  };
+  const loadFactors = async () => { const { data } = await supabase.auth.mfa.listFactors(); setFactors(data?.totp || []); };
   useEffect(() => { loadFactors(); }, []);
+
+  const toggleEmailOtp = async () => {
+    setLoading(true); setError(""); setSuccess("");
+    const { error: err } = await supabase.auth.updateUser({
+      data: { two_fa_enabled: !emailOtpEnabled, two_fa_method: "email" }
+    });
+    if (err) { setError(err.message); } else { setSuccess(emailOtpEnabled ? "Email 2FA disabled." : "Email 2FA enabled. A code will be sent to your email each time you sign in."); }
+    setLoading(false);
+  };
 
   const startEnroll = async () => {
     setLoading(true); setError(""); setSuccess("");
     const { data, error: enrollErr } = await supabase.auth.mfa.enroll({ factorType: "totp" });
     if (enrollErr) { setError(enrollErr.message); setLoading(false); return; }
-    setQrCode(data.totp.qr_code);
-    setSecret(data.totp.secret);
-    setFactorId(data.id);
-    setVerifyStep(true);
-    setLoading(false);
+    setQrCode(data.totp.qr_code); setSecret(data.totp.secret); setFactorId(data.id); setVerifyStep(true); setLoading(false);
   };
 
   const verifyEnroll = async () => {
@@ -1403,71 +1421,212 @@ function SecuritySettings({ user }) {
     if (cErr) { setError(cErr.message); setLoading(false); return; }
     const { error: vErr } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code: verifyCode.replace(/\s/g, "") });
     if (vErr) { setError("Invalid code. Try again."); setLoading(false); return; }
-    setSuccess("Two-factor authentication enabled."); setVerifyStep(false); setQrCode(null); setVerifyCode("");
-    loadFactors(); setLoading(false);
+    setSuccess("Authenticator app 2FA enabled."); setVerifyStep(false); setQrCode(null); setVerifyCode(""); loadFactors(); setLoading(false);
   };
 
   const unenroll = async (id) => {
-    if (!window.confirm("Remove 2FA from your account? This will reduce your account security.")) return;
-    await supabase.auth.mfa.unenroll({ factorId: id });
-    setSuccess("2FA removed."); loadFactors();
+    if (!window.confirm("Remove authenticator 2FA from your account?")) return;
+    await supabase.auth.mfa.unenroll({ factorId: id }); setSuccess("Authenticator 2FA removed."); loadFactors();
   };
 
   const activeFactor = factors.find(f => f.status === "verified");
 
   return (
-    <div style={{ maxWidth: 540 }}>
-      <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 6px" }}>Two-Factor Authentication</h2>
-        <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.65 }}>Add an extra layer of security to your account using an authenticator app (Google Authenticator, Authy, 1Password, etc.)</p>
-      </div>
+    <div style={{ maxWidth: 560 }}>
+      <h2 style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 6px" }}>Security & Two-Factor Authentication</h2>
+      <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 28px", lineHeight: 1.65 }}>Add an extra layer of protection. When enabled, you'll need to verify your identity each time you sign in.</p>
 
       {success && <div style={{ padding: "12px 16px", background: "rgba(46,196,182,0.08)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, marginBottom: 20 }}><p style={{ fontSize: 13, color: "#2EC4B6", fontFamily: BODY, margin: 0 }}>{success}</p></div>}
       {error && <div style={{ padding: "12px 16px", background: "var(--danger-dim)", border: "1px solid var(--danger-border)", borderRadius: 8, marginBottom: 20 }}><p style={{ fontSize: 13, color: "var(--danger)", fontFamily: BODY, margin: 0 }}>{error}</p></div>}
 
-      {activeFactor ? (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <span style={{ fontSize: 16 }}>🔐</span>
-                <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Authenticator App</p>
-                <Tag color="#2EC4B6">Active</Tag>
-              </div>
-              <p style={{ fontFamily: MONO, fontSize: 10, color: "var(--text-secondary)", margin: 0 }}>Enabled · {activeFactor.friendly_name || "TOTP authenticator"}</p>
+      {/* Option 1: Email OTP (recommended) */}
+      <div style={{ background: emailOtpEnabled ? "rgba(242,103,81,0.06)" : "var(--surface)", border: `1px solid ${emailOtpEnabled ? "var(--accent-border)" : "var(--border)"}`, borderRadius: 10, padding: 20, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: 18 }}>📧</span>
+              <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Email Verification Code</p>
+              {emailOtpEnabled && <Tag color="#2EC4B6">Active</Tag>}
+              <span style={{ padding: "2px 8px", background: "rgba(242,103,81,0.12)", border: "1px solid var(--accent-border)", borderRadius: 10, fontSize: 8, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1 }}>Recommended</span>
             </div>
-            <Btn danger small onClick={() => unenroll(activeFactor.id)}>Remove 2FA</Btn>
+            <p style={{ fontFamily: BODY, fontSize: 12, color: "var(--text-secondary)", margin: 0, lineHeight: 1.6 }}>When you sign in, a 6-digit code is sent to your email address. Enter it to complete login. No apps required.</p>
           </div>
-        </Card>
-      ) : !verifyStep ? (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <p style={{ fontFamily: DISPLAY, fontSize: 14, color: "var(--text-primary)", margin: "0 0 4px" }}>2FA is not enabled</p>
-              <p style={{ fontFamily: MONO, fontSize: 10, color: "var(--text-secondary)", margin: 0 }}>Protect your account with an authenticator app</p>
-            </div>
-            <Btn onClick={startEnroll} disabled={loading}>{loading ? "Loading..." : "Enable 2FA →"}</Btn>
-          </div>
-        </Card>
-      ) : (
-        <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 12, padding: 28 }}>
-          <Label>Step 1 — Scan QR Code</Label>
-          <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 16px", lineHeight: 1.65 }}>Open your authenticator app and scan this QR code, or manually enter the secret key below.</p>
-          {qrCode && <div style={{ marginBottom: 16, padding: 16, background: "#fff", borderRadius: 8, display: "inline-block" }}><img src={qrCode} alt="2FA QR Code" style={{ width: 180, height: 180, display: "block" }} /></div>}
-          {secret && <div style={{ padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: 6, marginBottom: 20 }}><p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 4px" }}>Manual Entry Key</p><p style={{ fontSize: 12, fontFamily: MONO, color: "var(--accent)", margin: 0, letterSpacing: 2 }}>{secret}</p></div>}
-          <Label>Step 2 — Verify Code</Label>
-          <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" }}>Enter the 6-digit code from your authenticator app to confirm setup.</p>
-          <input value={verifyCode} onChange={e => setVerifyCode(e.target.value)} placeholder="000 000" maxLength={7} style={inp} />
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-            <Btn secondary small onClick={() => { setVerifyStep(false); setQrCode(null); setFactorId(null); supabase.auth.mfa.unenroll({ factorId }); }}>Cancel</Btn>
-            <Btn onClick={verifyEnroll} disabled={loading || verifyCode.replace(/\s/g,"").length < 6}>{loading ? "Verifying..." : "Enable 2FA ✓"}</Btn>
-          </div>
+          <Btn onClick={toggleEmailOtp} disabled={loading} secondary={emailOtpEnabled}>{emailOtpEnabled ? "Disable" : "Enable →"}</Btn>
         </div>
-      )}
+      </div>
 
-      <div style={{ marginTop: 28, padding: "14px 18px", background: "rgba(110,231,216,0.04)", border: "1px solid rgba(110,231,216,0.15)", borderRadius: 8 }}>
-        <Label c="#6EE7D8">Phone Number (SMS 2FA)</Label>
-        <p style={{ fontSize: 12, color: "var(--text-secondary)", fontFamily: BODY, margin: 0, lineHeight: 1.65 }}>SMS-based 2FA can be configured per user in the Users tab. Phone numbers are stored for verification and account recovery. SMS delivery requires Twilio configuration in your Supabase project settings.</p>
+      {/* Option 2: Authenticator App */}
+      <div style={{ background: activeFactor ? "rgba(46,196,182,0.06)" : "var(--surface)", border: `1px solid ${activeFactor ? "rgba(46,196,182,0.3)" : "var(--border)"}`, borderRadius: 10, padding: 20, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: 18 }}>📱</span>
+              <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Authenticator App</p>
+              {activeFactor && <Tag color="#2EC4B6">Active</Tag>}
+            </div>
+            <p style={{ fontFamily: BODY, fontSize: 12, color: "var(--text-secondary)", margin: "0 0 8px", lineHeight: 1.6 }}>Use an authenticator app to generate 6-digit codes. Works offline and is highly secure.</p>
+            {!activeFactor && !verifyStep && (
+              <div style={{ padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 6px" }}>Recommended Apps</p>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {[["Google Authenticator", "Search on App Store or Google Play"], ["Authy", "authy.com — works across devices"], ["1Password", "Built-in authenticator in 1Password app"]].map(([name, note]) => (
+                    <div key={name} style={{ flex: 1, minWidth: 140 }}>
+                      <p style={{ fontSize: 11, fontFamily: MONO, color: "var(--text-primary)", margin: "0 0 2px" }}>{name}</p>
+                      <p style={{ fontSize: 10, color: "var(--text-secondary)", fontFamily: BODY, margin: 0 }}>{note}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {activeFactor
+            ? <Btn danger small onClick={() => unenroll(activeFactor.id)}>Remove</Btn>
+            : !verifyStep && <Btn secondary onClick={startEnroll} disabled={loading}>{loading ? "Loading..." : "Set Up →"}</Btn>
+          }
+        </div>
+
+        {verifyStep && (
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 14px", lineHeight: 1.65 }}><strong style={{ color: "var(--text-primary)" }}>Step 1:</strong> Download an authenticator app above, then open it and tap the + button to add a new account.</p>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: 1.65 }}><strong style={{ color: "var(--text-primary)" }}>Step 2:</strong> Scan the QR code below, or manually enter the secret key.</p>
+            {qrCode && <div style={{ marginBottom: 14, padding: 16, background: "#fff", borderRadius: 8, display: "inline-block" }}><img src={qrCode} alt="2FA QR Code" style={{ width: 160, height: 160, display: "block" }} /></div>}
+            {secret && <div style={{ padding: "10px 14px", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: 6, marginBottom: 16 }}><p style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 4px" }}>Manual Entry Key</p><p style={{ fontSize: 12, fontFamily: MONO, color: "var(--accent)", margin: 0, letterSpacing: 2, wordBreak: "break-all" }}>{secret}</p></div>}
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: 1.65 }}><strong style={{ color: "var(--text-primary)" }}>Step 3:</strong> Enter the 6-digit code the app shows to confirm setup.</p>
+            <input value={verifyCode} onChange={e => setVerifyCode(e.target.value)} placeholder="000 000" maxLength={7} style={codeInp} />
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <Btn secondary small onClick={() => { setVerifyStep(false); setQrCode(null); if (factorId) supabase.auth.mfa.unenroll({ factorId }); }}>Cancel</Btn>
+              <Btn onClick={verifyEnroll} disabled={loading || verifyCode.replace(/\s/g,"").length < 6}>{loading ? "Verifying..." : "Confirm & Enable →"}</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: "12px 16px", background: "rgba(148,163,184,0.05)", border: "1px solid var(--border)", borderRadius: 8 }}>
+        <p style={{ fontSize: 11, fontFamily: MONO, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 4px" }}>SMS / Text Message 2FA</p>
+        <p style={{ fontSize: 12, color: "var(--text-secondary)", fontFamily: BODY, margin: 0, lineHeight: 1.6 }}>Phone number 2FA (SMS codes) is available when Twilio is connected to your Supabase project. Phone numbers can be added per user in the Users tab and will be used once SMS 2FA is configured.</p>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Add User Wizard ──────────────────────────────────────────────────────────
+function AddUserWizard({ orgOwnerId, orgName, onComplete, onClose }) {
+  const [step, setStep] = useState(1);
+  const [profile, setProfile] = useState({ email: "", phone: "", name: "" });
+  const [roleType, setRoleType] = useState(null);
+  const [perms, setPerms] = useState({});
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const inp = { width: "100%", padding: "10px 13px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontFamily: BODY, fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 14 };
+  const levelColor = { null: "#94A3B8", view: "#6EE7D8", modify: "#F26751", delete: "#CC5A4A" };
+
+  const sendInvitation = async () => {
+    setSending(true); setError("");
+    const finalPerms = roleType === "admin" ? DEFAULT_PERMISSIONS.admin : perms;
+    const { error: invErr } = await supabase.functions.invoke("invite-user", {
+      body: { email: profile.email.trim(), role: roleType === "admin" ? "admin" : "member", orgOwnerId, orgName }
+    });
+    if (invErr) { setError(invErr.message || "Invite failed. Is the Edge Function deployed?"); setSending(false); return; }
+    // Save permissions to member record after invite creates it
+    if (roleType !== "admin") {
+      await supabase.from("organization_members").update({ permissions: finalPerms, phone: profile.phone })
+        .eq("org_owner_id", orgOwnerId).eq("email", profile.email.trim().toLowerCase()).eq("status", "pending");
+    }
+    onComplete();
+  };
+
+  const stepTitles = ["", "User Details", "Select Role", "Set Permissions"];
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(7,24,39,0.9)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, backdropFilter: "blur(4px)" }}>
+      <div style={{ background: "var(--surface)", border: "1px solid var(--accent-border)", borderRadius: 14, padding: "36px 40px", maxWidth: 520, width: "92%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.6)", animation: "fadeUp 0.3s ease both" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div>
+            <h3 style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px" }}>{stepTitles[step]}</h3>
+            <p style={{ fontFamily: MONO, fontSize: 9, color: "var(--text-secondary)", margin: 0, textTransform: "uppercase", letterSpacing: 1.5 }}>Step {step} of {roleType === "admin" || step < 2 ? 2 : 3}</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 20 }}>×</button>
+        </div>
+        <div style={{ height: 2, background: "var(--border)", borderRadius: 1, marginBottom: 28 }}>
+          <div style={{ width: `${(step / (roleType === "limited" ? 3 : 2)) * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 1, transition: "width 0.3s" }} />
+        </div>
+
+        {/* Step 1: User details */}
+        {step === 1 && (
+          <div>
+            <Label>Email Address <span style={{ color: "var(--danger)", marginLeft: 2 }}>*</span></Label>
+            <input value={profile.email} onChange={e => setProfile(p => ({...p, email: e.target.value}))} placeholder="user@example.com" type="email" style={inp} />
+            <Label>Phone Number <span style={{ fontSize: 9, color: "var(--text-secondary)", fontWeight: 400 }}>optional — for SMS 2FA</span></Label>
+            <input value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))} placeholder="+1 (555) 000-0000" style={inp} />
+            <Label>Full Name <span style={{ fontSize: 9, color: "var(--text-secondary)", fontWeight: 400 }}>optional</span></Label>
+            <input value={profile.name} onChange={e => setProfile(p => ({...p, name: e.target.value}))} placeholder="Jane Smith" style={{...inp, marginBottom: 28}} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <Btn secondary small onClick={onClose}>Cancel</Btn>
+              <Btn onClick={() => setStep(2)} disabled={!profile.email.trim() || !profile.email.includes("@")}>Next →</Btn>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Role selection */}
+        {step === 2 && (
+          <div>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 20px", lineHeight: 1.65 }}>Choose the access level for <strong style={{ color: "var(--text-primary)" }}>{profile.email}</strong>.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 }}>
+              <button onClick={() => setRoleType("admin")} style={{ padding: "18px 20px", background: roleType === "admin" ? "rgba(242,103,81,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${roleType === "admin" ? "var(--accent-border)" : "var(--border)"}`, borderLeft: `3px solid ${roleType === "admin" ? "var(--accent)" : "var(--border)"}`, borderRadius: 8, cursor: "pointer", textAlign: "left" }}>
+                <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, color: roleType === "admin" ? "var(--accent)" : "var(--text-primary)", margin: "0 0 4px" }}>Admin — Full Access</p>
+                <p style={{ fontFamily: BODY, fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>Can view, edit, and delete everything across all layers. Can manage team members and settings.</p>
+              </button>
+              <button onClick={() => setRoleType("limited")} style={{ padding: "18px 20px", background: roleType === "limited" ? "rgba(46,196,182,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${roleType === "limited" ? "rgba(46,196,182,0.35)" : "var(--border)"}`, borderLeft: `3px solid ${roleType === "limited" ? "#2EC4B6" : "var(--border)"}`, borderRadius: 8, cursor: "pointer", textAlign: "left" }}>
+                <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, color: roleType === "limited" ? "#2EC4B6" : "var(--text-primary)", margin: "0 0 4px" }}>Limited User — Custom Permissions</p>
+                <p style={{ fontFamily: BODY, fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>Choose specific access levels for each area of the application on the next screen.</p>
+              </button>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <Btn secondary small onClick={() => setStep(1)}>← Back</Btn>
+              <Btn onClick={() => roleType === "admin" ? sendInvitation() : setStep(3)} disabled={!roleType || sending}>
+                {sending ? "Sending..." : roleType === "admin" ? "Finish & Send Invite →" : "Next — Set Permissions →"}
+              </Btn>
+            </div>
+            {error && <p style={{ fontSize: 12, color: "var(--danger)", fontFamily: BODY, margin: "12px 0 0" }}>{error}</p>}
+          </div>
+        )}
+
+        {/* Step 3: Permissions (limited users only) */}
+        {step === 3 && (
+          <div>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: "var(--text-secondary)", margin: "0 0 20px", lineHeight: 1.65 }}>Set permissions for each area. You can update these at any time from the Users page.</p>
+            {PERMISSION_SECTIONS.map(section => {
+              const levels = ["No Access", "View Only", "View & Modify", ...(section.canDelete ? ["View, Modify & Delete"] : [])];
+              const vals   = [null, "view", "modify", ...(section.canDelete ? ["delete"] : [])];
+              const cur = perms[section.key] ?? "view";
+              return (
+                <div key={section.key} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <p style={{ fontSize: 11, fontFamily: MONO, color: levelColor[String(cur)] || "#94A3B8", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 2px" }}>{section.label}</p>
+                    <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: BODY, margin: 0 }}>{section.desc}</p>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {levels.map((label, i) => {
+                      const val = vals[i];
+                      const active = cur === val || (val === null && cur === null);
+                      return (
+                        <button key={label} onClick={() => setPerms(p => ({...p, [section.key]: val}))} style={{ padding: "5px 12px", background: active ? `${levelColor[String(val)]}18` : "transparent", border: `1px solid ${active ? levelColor[String(val)] : "var(--border)"}`, borderRadius: 5, color: active ? levelColor[String(val)] : "var(--text-secondary)", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer" }}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            {error && <p style={{ fontSize: 12, color: "var(--danger)", fontFamily: BODY, margin: "0 0 12px" }}>{error}</p>}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
+              <Btn secondary small onClick={() => setStep(2)}>← Back</Btn>
+              <Btn onClick={sendInvitation} disabled={sending}>{sending ? "Sending Invite..." : "Finish & Send Invite →"}</Btn>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1482,6 +1641,7 @@ function UsersSettings({ user, orgOwnerId, orgName }) {
   const [permsMember, setPermsMember] = useState(null);
   const [actionMsg, setActionMsg] = useState("");
   const [actionErr, setActionErr] = useState("");
+  const [showWizard, setShowWizard] = useState(false);
 
   const loadMembers = async () => {
     setLoading(true);
@@ -1571,9 +1731,25 @@ function UsersSettings({ user, orgOwnerId, orgName }) {
       {loading ? <div style={{ display: "flex", justifyContent: "center", padding: 40 }}><Spinner medium label="Loading users..." /></div> : (
         <div>
           {tab === "active" && (
-            activeMembers.length === 0
-              ? <Card><div style={{ textAlign: "center", padding: "20px 0" }}><p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0 }}>No active users yet. Use the Team section to invite users.</p></div></Card>
-              : activeMembers.map(m => <MemberRow key={m.id} m={m} />)
+            <div>
+              {/* Owner row — always shown first */}
+              <Animated delay={0}>
+                <div style={{ background: "rgba(242,103,81,0.06)", border: "1px solid rgba(242,103,81,0.2)", borderLeft: "3px solid var(--accent)", borderRadius: 8, padding: "14px 18px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{user.email}</p>
+                      <Tag color="var(--accent)">Owner</Tag>
+                      <Tag color="#2EC4B6">Active</Tag>
+                    </div>
+                    <p style={{ fontSize: 10, fontFamily: MONO, color: "var(--text-secondary)", margin: 0 }}>Account owner · Full access to all features</p>
+                  </div>
+                </div>
+              </Animated>
+              {activeMembers.length === 0
+                ? <Card><div style={{ textAlign: "center", padding: "12px 0" }}><p style={{ color: "var(--text-secondary)", fontSize: 13, margin: 0 }}>No additional users yet. Click "+ Add New User" to invite someone.</p></div></Card>
+                : activeMembers.map(m => <MemberRow key={m.id} m={m} />)
+              }
+            </div>
           )}
           {tab === "disabled" && (
             disabledMembers.length === 0
@@ -1884,7 +2060,6 @@ function PerspexisCore() {
   const [showSettings, setShowSettings] = useState(false);
   const [orgOwnerId, setOrgOwnerId] = useState(null);
   const [userRole, setUserRole] = useState("owner");
-  const [showTeam, setShowTeam] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(null);
 
   // ── Auth state listener ──────────────────────────────────────────────────
@@ -2148,7 +2323,7 @@ function PerspexisCore() {
           </div>
           <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 3, margin: "0 0 14px 10px" }}>Core Layers</p>
           {LAYERS.map((l, li) => (
-            <button key={l.id} onClick={() => setActive(l.id)} onClick={() => { setActive(l.id); setShowTeam(false); setShowSettings(false); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: !showTeam && !showSettings && active === l.id ? "var(--accent-dim)" : "transparent", borderLeft: !showTeam && !showSettings && active === l.id ? "2px solid var(--accent)" : "2px solid transparent", color: !showTeam && !showSettings && active === l.id ? "var(--accent)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2, animation: `fadeUp 0.3s ease ${li * 50}ms both` }}>
+            <button key={l.id} onClick={() => setActive(l.id)} onClick={() => { setActive(l.id); setShowSettings(false); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: !showSettings && active === l.id ? "var(--accent-dim)" : "transparent", borderLeft: !showSettings && active === l.id ? "2px solid var(--accent)" : "2px solid transparent", color: !showSettings && active === l.id ? "var(--accent)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2, animation: `fadeUp 0.3s ease ${li * 50}ms both` }}>
               <span style={{ fontSize: 13, opacity: active === l.id ? 1 : 0.6 }}>{l.icon}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontFamily: DISPLAY, display: "flex", justifyContent: "space-between", letterSpacing: 0.3, fontWeight: active === l.id ? 600 : 400 }}>
@@ -2161,7 +2336,7 @@ function PerspexisCore() {
             </button>
           ))}
           {userRole === "owner" && (
-            <button onClick={() => { setShowSettings(s => !s); setShowTeam(false); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showSettings ? "rgba(110,231,216,0.1)" : "transparent", borderLeft: showSettings ? "2px solid #6EE7D8" : "2px solid transparent", color: showSettings ? "#6EE7D8" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>
+            <button onClick={() => { setShowSettings(s => !s); setShowPricing(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showSettings ? "rgba(110,231,216,0.1)" : "transparent", borderLeft: showSettings ? "2px solid #6EE7D8" : "2px solid transparent", color: showSettings ? "#6EE7D8" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>
               <span style={{ fontSize: 13, opacity: showSettings ? 1 : 0.6 }}>⚙</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontFamily: DISPLAY, letterSpacing: 0.3, fontWeight: showSettings ? 600 : 400 }}>Settings</div>
@@ -2169,15 +2344,7 @@ function PerspexisCore() {
               </div>
             </button>
           )}
-          {userRole === "owner" && (
-            <button onClick={() => { setShowTeam(t => !t); setShowPricing(false); setShowSettings(false); }} style={{ width: "100%", padding: "10px 12px", borderRadius: 5, border: "none", background: showTeam ? "rgba(46,196,182,0.1)" : "transparent", borderLeft: showTeam ? "2px solid var(--teal)" : "2px solid transparent", color: showTeam ? "var(--teal)" : "var(--taupe)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", textAlign: "left", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, opacity: showTeam ? 1 : 0.6 }}>◈◎</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontFamily: DISPLAY, letterSpacing: 0.3, fontWeight: showTeam ? 600 : 400 }}>Manage Team</div>
-                <div style={{ fontSize: 9, color: "var(--text-primary)", marginTop: 2, fontFamily: MONO, letterSpacing: 0.3, opacity: 0.7 }}>Users & permissions</div>
-              </div>
-            </button>
-          )}
+
           <div style={{ position: "absolute", bottom: 16, left: 10, right: 10, padding: "13px 12px", background: "rgba(46,196,182,0.03)", border: "1px solid rgba(46,196,182,0.1)", borderRadius: 8 }}>
             <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 5px" }}>Next Tier</p>
             <p style={{ fontSize: 10, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.5, fontFamily: DISPLAY }}>Numbers, Process & Growth</p>
@@ -2190,8 +2357,6 @@ function PerspexisCore() {
         <div className="px-content" style={{ flex: 1, overflow: "auto", padding: "30px 34px" }}>
           {showSettings ? (
             <SettingsPage user={user} orgOwnerId={orgOwnerId || user.id} orgName={orgName} onClose={() => setShowSettings(false)} />
-          ) : showTeam ? (
-            <TeamPanel user={user} orgOwnerId={orgOwnerId || user.id} orgName={orgName} onClose={() => setShowTeam(false)} />
           ) : LAYERS.map(l => active === l.id && (
             <div key={l.id}>
               <div style={{ marginBottom: 26 }}>
@@ -2248,17 +2413,24 @@ function AuthScreen({ onAuth }) {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState(null);
   const [mfaCode, setMfaCode] = useState("");
+  const [mfaMethod, setMfaMethod] = useState("email");
 
   const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid #243746", borderRadius: 6, color: "#F5F7FA", fontFamily: BODY, fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 };
 
   const handleMFAVerify = async () => {
     setLoading(true); setError("");
-    const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
-    if (cErr) { setError(cErr.message); setLoading(false); return; }
-    const { error: vErr } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challenge.id, code: mfaCode.replace(/\s/g, "") });
-    if (vErr) { setError("Invalid code. Try again."); setLoading(false); return; }
-    const { data: { user } } = await supabase.auth.getUser();
-    onAuth(user);
+    if (mfaMethod === "email") {
+      const { data: vData, error: vErr } = await supabase.auth.verifyOtp({ email, token: mfaCode.replace(/\s/g, ""), type: "email" });
+      if (vErr) { setError("Invalid code. Check your email and try again."); setLoading(false); return; }
+      onAuth(vData.user);
+    } else {
+      const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (cErr) { setError(cErr.message); setLoading(false); return; }
+      const { error: vErr } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challenge.id, code: mfaCode.replace(/\s/g, "") });
+      if (vErr) { setError("Invalid code. Try again."); setLoading(false); return; }
+      const { data: { user } } = await supabase.auth.getUser();
+      onAuth(user);
+    }
   };
 
   const handleSubmit = async () => {
@@ -2266,12 +2438,17 @@ function AuthScreen({ onAuth }) {
     if (mode === "login") {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(error.message); setLoading(false); return; }
-      // Check if MFA verification is required
+      const meta = data.user?.user_metadata || {};
+      if (meta.two_fa_enabled && meta.two_fa_method === "email") {
+        await supabase.auth.signOut();
+        await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+        setMfaMethod("email"); setMfaRequired(true); setLoading(false); return;
+      }
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.nextLevel === "aal2" && aalData?.currentLevel === "aal1") {
         const { data: factorsData } = await supabase.auth.mfa.listFactors();
         const totpFactor = factorsData?.totp?.[0];
-        if (totpFactor) { setMfaFactorId(totpFactor.id); setMfaRequired(true); setLoading(false); return; }
+        if (totpFactor) { setMfaFactorId(totpFactor.id); setMfaMethod("totp"); setMfaRequired(true); setLoading(false); return; }
       }
       onAuth(data.user);
     } else if (mode === "signup") {
@@ -2347,8 +2524,8 @@ function AuthScreen({ onAuth }) {
             <div style={{ animation: "fadeUp 0.3s ease both" }}>
               <div style={{ textAlign: "center", marginBottom: 28 }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
-                <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, color: "#F5F7FA", margin: "0 0 8px" }}>Two-Factor Authentication</h2>
-                <p style={{ fontFamily: BODY, fontSize: 13, color: "#94A3B8", margin: 0 }}>Enter the 6-digit code from your authenticator app.</p>
+                <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, color: "#F5F7FA", margin: "0 0 8px" }}>Verify Your Identity</h2>
+                <p style={{ fontFamily: BODY, fontSize: 13, color: "#94A3B8", margin: 0 }}>{mfaMethod === "email" ? `A 6-digit code was sent to ${email}` : "Enter the 6-digit code from your authenticator app."}</p>
               </div>
               <input value={mfaCode} onChange={e => setMfaCode(e.target.value)} onKeyDown={e => e.key === "Enter" && handleMFAVerify()} placeholder="000 000" maxLength={7} style={{ width: "100%", padding: "16px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid #243746", borderRadius: 6, color: "#F5F7FA", fontFamily: MONO, fontSize: 24, outline: "none", boxSizing: "border-box", marginBottom: 12, letterSpacing: 8, textAlign: "center" }} />
               {error && <p style={{ fontSize: 12, color: "#F26751", fontFamily: BODY, margin: "0 0 12px" }}>{error}</p>}
