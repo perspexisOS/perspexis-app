@@ -1432,75 +1432,53 @@ function AuthScreen({ onAuth }) {
 function PerspexisLogo() {
   return (
     <svg
-      width="200"
-      height="90"
-      viewBox="0 0 880 400"
+      height="200"
+      viewBox="0 0 400 520"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Perspexis"
+      aria-label="Perspexis logo"
+      style={{ display: "block" }}
     >
-      <defs>
-        <linearGradient id="coral" x1="380" y1="72" x2="500" y2="150">
-          <stop stopColor="#FF7A66" />
-          <stop offset="1" stopColor="#F26751" />
-        </linearGradient>
-        <linearGradient id="teal" x1="330" y1="135" x2="550" y2="195">
-          <stop stopColor="#4DB7C7" />
-          <stop offset="1" stopColor="#2292A4" />
-        </linearGradient>
-        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#000" floodOpacity="0.22" />
-        </filter>
-      </defs>
-      {/* Coral top diamond */}
-      <path
-        d="M440 72 L498 107 Q505 111 498 116 L440 151 L382 116 Q375 111 382 107 Z"
-        fill="url(#coral)"
-        filter="url(#softShadow)"
+      {/* Coral rounded diamond */}
+      <rect
+        x="172" y="77" width="56" height="56" rx="12"
+        transform="rotate(45 200 105)"
+        fill="#E8574A"
       />
-      {/* Teal upper chevron */}
+
+      {/* Teal chevron */}
       <path
-        d="M343 139 Q367 124 391 139 L440 168 L489 139 Q513 124 537 139 L542 142 Q550 147 550 157 L550 178 Q550 187 542 192 L440 253 L338 192 Q330 187 330 178 L330 157 Q330 147 338 142 Z"
-        fill="url(#teal)"
-        filter="url(#softShadow)"
+        d="M 78 192 L 200 282 L 322 192"
+        fill="none"
+        stroke="#2B9BAB"
+        strokeWidth="46"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      {/* White lower chevron */}
+
+      {/* Light gray chevron */}
       <path
-        d="M343 186 Q367 171 391 186 L440 215 L489 186 Q513 171 537 186 L542 189 Q550 194 550 204 L550 225 Q550 234 542 239 L440 300 L338 239 Q330 234 330 225 L330 204 Q330 194 338 189 Z"
-        fill="#F6F6F3"
-        stroke="#DADAD6"
-        strokeWidth="3"
-        filter="url(#softShadow)"
+        d="M 78 260 L 200 350 L 322 260"
+        fill="none"
+        stroke="#D8D8D5"
+        strokeWidth="46"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
+
       {/* Wordmark */}
       <text
-        x="440"
-        y="255"
+        x="200"
+        y="466"
         textAnchor="middle"
-        fontFamily="Arial Rounded MT Bold, Helvetica Rounded, Arial, sans-serif"
-        fontSize="52"
-        fontWeight="800"
-        letterSpacing="-4"
-        fill="#F1F1EF"
-        stroke="#D3D3CF"
-        strokeWidth="2"
-        paintOrder="stroke fill"
+        fontFamily="'Nunito', 'Varela Round', 'Quicksand', system-ui, sans-serif"
+        fontSize="70"
+        fontWeight="700"
+        letterSpacing="-1"
+        fill="#E0E0DD"
       >
         perspexis
-      </text>
-      {/* Tagline */}
-      <text
-        x="440"
-        y="328"
-        textAnchor="middle"
-        fontFamily="Inter, Arial, sans-serif"
-        fontSize="20"
-        fontWeight="500"
-        letterSpacing="18"
-        fill="#0B0B0B"
-      >
-        CLARITY. ALIGNMENT. MOMENTUM.
       </text>
     </svg>
   );
@@ -1513,9 +1491,9 @@ function OnboardingScreen({ onStart }) {
   const orgTypes = ["Business", "Church / Ministry", "Nonprofit", "Agency", "Other"];
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DISPLAY }}>
+    <div style={{ minHeight: "100vh", background: "#071827", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DISPLAY }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600&family=DM+Mono:wght@400;500&family=Nunito:wght@700;800&display=swap');
         * { box-sizing: border-box; }
         @keyframes arcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
