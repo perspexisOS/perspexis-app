@@ -107,7 +107,7 @@ function IdentityView({ data, onEdit }) {
           ))}
         </div>
       </Card></Animated>
-      <Animated delay={120}><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+      <Animated delay={120}><div className="px-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 20 }}>
           <Label>North Star Vision</Label>
           <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--text-primary)", margin: 0, fontFamily: DISPLAY }}>{data.vision_north}</p>
@@ -127,7 +127,7 @@ function IdentityView({ data, onEdit }) {
       </div></Animated>
       <Animated delay={180}>
         <Label>Core Values</Label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }} className="px-grid-2">
           {data.values.map((v, i) => (
             <Animated key={i} delay={180 + i * 40}>
               <div style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 18 }}>
@@ -180,7 +180,7 @@ function IdentityEdit({ data, onSave, onCancel, isSetup }) {
       <Label>Core Values</Label>
       {d.values.map((v, i) => (
         <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 14, marginBottom: 10 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }} className="px-grid-2">
             <div>
               <Label>Value Name</Label>
               <input value={v.name} onChange={e => setVal(i, "name", e.target.value)} style={inp} />
@@ -332,14 +332,14 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
               <Btn small onClick={() => { if(newRole.name.trim()&&newRole.role.trim()){ onAddRole&&onAddRole({...newRole}); setNewRole({type:"leader",name:"",role:"",owns:"",reports:""}); setAddingRole(false); }}} disabled={!newRole.name.trim()||!newRole.role.trim()}>Add Role ✓</Btn>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }} className="px-grid-3">
             <div><Label>Name</Label><input value={newRole.name} onChange={e=>setNewRole(p=>({...p,name:e.target.value}))} placeholder="Full name" style={inpStyle} /></div>
             <div><Label>Role Title</Label><input value={newRole.role} onChange={e=>setNewRole(p=>({...p,role:e.target.value}))} placeholder="e.g. Worship Director" style={inpStyle} /></div>
             <div><Label>Type</Label><select value={newRole.type} onChange={e=>setNewRole(p=>({...p,type:e.target.value}))} style={{...inpStyle,background:"rgba(16,37,52,0.95)"}}>
               {["leader","director","coordinator","support","pastor","vacant"].map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
             </select></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }} className="px-grid-2">
             <div><Label>Owns & Winning</Label><input value={newRole.owns} onChange={e=>setNewRole(p=>({...p,owns:e.target.value}))} placeholder="What this role owns and what winning looks like" style={inpStyle} /></div>
             <div><Label>Reports To</Label><input value={newRole.reports} onChange={e=>setNewRole(p=>({...p,reports:e.target.value}))} placeholder="Direct supervisor" style={inpStyle} /></div>
           </div>
@@ -347,7 +347,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
       )}
 
       {/* Grade Banner */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }} className="px-grade-banner">
         <div>
           {overallScore !== null ? (
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -395,7 +395,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
                 }}>
                   {!isEditing ? (
                     <div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 2.2fr 1fr", gap: 16, alignItems: "start", marginBottom: grade ? 12 : 0 }}>
+                      <div className="px-role-card-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr 2.2fr 1fr", gap: 16, alignItems: "start", marginBottom: grade ? 12 : 0 }}>
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
                             <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0 }}>{p.name}</p>
@@ -563,7 +563,7 @@ function RhythmSetup({ onDone }) {
         ))}
       </div>
       {step === 0 && (<div><h3 style={{ color: "var(--text-primary)", fontWeight: 400, fontSize: 18, margin: "0 0 6px" }}>What rhythms exist right now?</h3><p style={{ color: "var(--text-primary)", fontSize: 13, margin: "0 0 18px"}}>List everything — even what isn't working.</p><textarea value={current} onChange={e => setCurrent(e.target.value)} placeholder="e.g. Sunday morning team huddle, inconsistent leader texts..." style={{ ...fs, minHeight: 110, resize: "vertical" }} /></div>)}
-      {step === 1 && (<div><h3 style={{ color: "var(--text-primary)", fontWeight: 400, fontSize: 18, margin: "0 0 6px" }}>Build your operating rhythm.</h3><p style={{ color: "var(--text-primary)", fontSize: 13, margin: "0 0 18px"}}>Define the cadences your team will actually run on.</p>{cadences.map((c, i) => (<div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 14, marginBottom: 10 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}><span style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1 }}>Cadence {i + 1}</span>{cadences.length > 1 && <button onClick={() => setCadences(p => p.filter((_, x) => x !== i))} style={{ background: "none", border: "none", color: "var(--text-primary)", cursor: "pointer", fontSize: 16 }}>×</button>}</div><div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, marginBottom: 8 }}><input value={c.name} onChange={e => upd(i, "name", e.target.value)} placeholder="Meeting name" style={fs} /><input value={c.freq} onChange={e => upd(i, "freq", e.target.value)} placeholder="Frequency" style={fs} /><input value={c.dur} onChange={e => upd(i, "dur", e.target.value)} placeholder="Duration" style={fs} /></div><div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }}><input value={c.who} onChange={e => upd(i, "who", e.target.value)} placeholder="Who attends" style={fs} /><input value={c.purpose} onChange={e => upd(i, "purpose", e.target.value)} placeholder="Purpose" style={fs} /></div></div>))}<button onClick={() => setCadences(p => [...p, { name: "", freq: "", dur: "", who: "", purpose: "" }])} style={{ width: "100%", padding: 10, background: "transparent", border: "1px dashed var(--border)", borderRadius: 7, color: "var(--text-primary)", fontFamily: MONO, fontSize: 11, cursor: "pointer", textTransform: "uppercase", letterSpacing: 1 }}>+ Add Cadence</button></div>)}
+      {step === 1 && (<div><h3 style={{ color: "var(--text-primary)", fontWeight: 400, fontSize: 18, margin: "0 0 6px" }}>Build your operating rhythm.</h3><p style={{ color: "var(--text-primary)", fontSize: 13, margin: "0 0 18px"}}>Define the cadences your team will actually run on.</p>{cadences.map((c, i) => (<div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 14, marginBottom: 10 }}><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}><span style={{ fontSize: 9, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 1 }}>Cadence {i + 1}</span>{cadences.length > 1 && <button onClick={() => setCadences(p => p.filter((_, x) => x !== i))} style={{ background: "none", border: "none", color: "var(--text-primary)", cursor: "pointer", fontSize: 16 }}>×</button>}</div><div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, marginBottom: 8 }} className="px-grid-3"><input value={c.name} onChange={e => upd(i, "name", e.target.value)} placeholder="Meeting name" style={fs} /><input value={c.freq} onChange={e => upd(i, "freq", e.target.value)} placeholder="Frequency" style={fs} /><input value={c.dur} onChange={e => upd(i, "dur", e.target.value)} placeholder="Duration" style={fs} /></div><div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }} className="px-grid-2"><input value={c.who} onChange={e => upd(i, "who", e.target.value)} placeholder="Who attends" style={fs} /><input value={c.purpose} onChange={e => upd(i, "purpose", e.target.value)} placeholder="Purpose" style={fs} /></div></div>))}<button onClick={() => setCadences(p => [...p, { name: "", freq: "", dur: "", who: "", purpose: "" }])} style={{ width: "100%", padding: 10, background: "transparent", border: "1px dashed var(--border)", borderRadius: 7, color: "var(--text-primary)", fontFamily: MONO, fontSize: 11, cursor: "pointer", textTransform: "uppercase", letterSpacing: 1 }}>+ Add Cadence</button></div>)}
       {step === 2 && (<div><h3 style={{ color: "var(--text-primary)", fontWeight: 400, fontSize: 18, margin: "0 0 6px" }}>Where does communication break down?</h3><p style={{ color: "var(--text-primary)", fontSize: 13, margin: "0 0 18px"}}>Where do things get lost? Where is your team misaligned?</p><textarea value={breaks} onChange={e => setBreaks(e.target.value)} placeholder="e.g. Leaders find out about changes through the grapevine..." style={{ ...fs, minHeight: 110, resize: "vertical" }} /></div>)}
       <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
         {step > 0 && <Btn secondary onClick={() => setStep(s => s - 1)}>← Back</Btn>}
@@ -686,7 +686,7 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
   return (
     <div>
       {/* Grade Banner */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }} className="px-grade-banner">
         <div>
           {overallScore !== null ? (
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -731,7 +731,7 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
           <div key={i} style={{ background: isEditing ? "rgba(242,103,81,0.06)" : "var(--surface)", border: `1px solid ${isEditing ? "rgba(46,196,182,0.3)" : grade ? `${scoreColor(grade.score)}25` : "var(--border)"}`, borderLeft: `3px solid ${leftColor}`, borderRadius: 9, padding: 16, marginBottom: 10 }}>
             {!isEditing ? (
               <div>
-                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 2fr", gap: 14, alignItems: "start", marginBottom: grade ? 12 : 0 }}>
+                <div className="px-cadence-grid" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 2fr", gap: 14, alignItems: "start", marginBottom: grade ? 12 : 0 }}>
                   <div>
                     <p style={{ fontSize: 13, fontFamily: MONO, color: "var(--text-primary)", margin: "0 0 3px" }}>{c.name}</p>
                     <p style={{ fontSize: 11, color: "var(--text-primary)", margin: "0 0 8px" }}>{c.freq}</p>
@@ -769,12 +769,12 @@ If you have enough, respond ONLY with this JSON (no markdown, no backticks):
                     <Btn small onClick={saveEdit}>Save & Clear Grade ✓</Btn>
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, marginBottom: 8 }} className="px-grid-3">
                   <div><Label>Name</Label><input value={editDraft.name} onChange={e => setEditDraft(p => ({ ...p, name: e.target.value }))} style={fs} /></div>
                   <div><Label>Frequency</Label><input value={editDraft.freq} onChange={e => setEditDraft(p => ({ ...p, freq: e.target.value }))} style={fs} /></div>
                   <div><Label>Duration</Label><input value={editDraft.dur} onChange={e => setEditDraft(p => ({ ...p, dur: e.target.value }))} style={fs} /></div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }} className="px-grid-2">
                   <div><Label>Who Attends</Label><input value={editDraft.who} onChange={e => setEditDraft(p => ({ ...p, who: e.target.value }))} style={fs} /></div>
                   <div><Label>Purpose</Label><input value={editDraft.purpose} onChange={e => setEditDraft(p => ({ ...p, purpose: e.target.value }))} style={fs} /></div>
                 </div>
@@ -923,7 +923,7 @@ Return ONLY raw JSON, no markdown, no backticks:
       {pohi && (
         <div>
           <Label>The 6 POHI Dimensions</Label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }} className="px-grid-2">
             {pohi.dimensions.map((d, i) => (
               <div key={i} style={{ background: "var(--surface)", border: `1px solid ${dimColors[i]}20`, borderTop: `2px solid ${dimColors[i]}`, borderRadius: 10, padding: 18 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -1225,9 +1225,24 @@ export default function PerspexisCore() {
         input, textarea { background: rgba(255,255,255,0.05) !important; color: #F5F7FA !important; border-color: #243746 !important; }
         input::placeholder, textarea::placeholder { color: #94A3B8 !important; }
         input:focus, textarea:focus { border-color: #F26751 !important; outline: none; }
+        /* ─── Responsive ────────────────────────────────────── */
+        .px-bottom-nav       { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 100; }
+        @media (max-width: 767px) {
+          .px-sidebar        { display: none !important; }
+          .px-bottom-nav     { display: flex !important; }
+          .px-content        { padding: 16px 16px 80px !important; }
+          .px-topnav         { padding: 8px 14px !important; }
+          .px-hide-mobile    { display: none !important; }
+          .px-grid-2         { grid-template-columns: 1fr !important; }
+          .px-grid-3         { grid-template-columns: 1fr !important; }
+          .px-cadence-grid   { grid-template-columns: 1fr 1fr !important; }
+          .px-grade-banner   { flex-direction: column !important; align-items: stretch !important; }
+          .px-grade-banner > div:last-child { align-items: flex-start !important; }
+          .px-role-card-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
-      <div style={{ borderBottom: "1px solid var(--border)", padding: "10px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--surface)" }}>
+      <div style={{ borderBottom: "1px solid var(--border)", padding: "10px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--surface)" }} className="px-topnav">
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <PerspexisLogo height={80} />
@@ -1237,17 +1252,17 @@ export default function PerspexisCore() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 3px", opacity: 0.6 }}>Core Progress</p>
+            <p style={{ fontSize: 8, fontFamily: MONO, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: 2, margin: "0 0 3px", opacity: 0.6 }} className="px-hide-mobile">Core Progress</p>
             <p style={{ fontSize: 11, fontFamily: MONO, color: "var(--accent)", margin: 0, fontWeight: 500 }}>{pct}% Complete</p>
           </div>
-          <div style={{ width: 80 }}><Bar v={pct} /></div>
-          <span style={{ padding: "3px 10px", borderRadius: 3, background: "var(--accent-dim)", border: "1px solid var(--border)", color: "var(--accent)", fontSize: 9, fontFamily: MONO, textTransform: "uppercase", letterSpacing: 1.5 }}>Core</span>
+          <div className="px-hide-mobile" style={{ width: 80 }}><Bar v={pct} /></div>
+          <span style={{ padding: "3px 10px", borderRadius: 3, background: "var(--accent-dim)", border: "1px solid var(--border)", color: "var(--accent)", fontSize: 9, fontFamily: MONO, textTransform: "uppercase", letterSpacing: 1.5 }} className="px-hide-mobile">Core</span>
           <button onClick={() => supabase.auth.signOut()} style={{ padding: "5px 12px", background: "transparent", border: "1px solid var(--border)", borderRadius: 4, color: "var(--text-secondary)", fontFamily: MONO, fontSize: 9, textTransform: "uppercase", letterSpacing: 1, cursor: "pointer" }}>Sign Out</button>
         </div>
       </div>
 
       <div style={{ display: "flex", height: "calc(100vh - 56px)" }}>
-        <div style={{ width: 194, borderRight: "1px solid var(--border)", padding: "18px 10px", flexShrink: 0, position: "relative", background: "rgba(16,37,52,0.6)" }}>
+        <div style={{ width: 194, borderRight: "1px solid var(--border)", padding: "18px 10px", flexShrink: 0, position: "relative", background: "rgba(16,37,52,0.6)" }} className="px-sidebar">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
             <PerspexisIcon size={38} />
           </div>
@@ -1274,7 +1289,7 @@ export default function PerspexisCore() {
           </div>
         </div>
 
-        <div style={{ flex: 1, overflow: "auto", padding: "30px 34px" }}>
+        <div className="px-content" style={{ flex: 1, overflow: "auto", padding: "30px 34px" }}>
           {LAYERS.map(l => active === l.id && (
             <div key={l.id}>
               <div style={{ marginBottom: 26 }}>
@@ -1305,6 +1320,15 @@ export default function PerspexisCore() {
             </div>
           ))}
         </div>
+      </div>
+      {/* Mobile bottom nav */}
+      <div className="px-bottom-nav" style={{ display: "none" }}>
+        {LAYERS.map(l => (
+          <button key={l.id} onClick={() => setActive(l.id)} style={{ flex: 1, padding: "8px 4px", background: "none", border: "none", color: active === l.id ? "var(--accent)" : "var(--taupe)", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" }}>
+            <span style={{ fontSize: 18 }}>{l.icon}</span>
+            <span style={{ fontSize: 8, fontFamily: MONO, textTransform: "uppercase", letterSpacing: 1 }}>{l.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -1347,10 +1371,14 @@ function AuthScreen({ onAuth }) {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes arcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         input::placeholder { color: #94A3B8 !important; }
+        @media (max-width: 767px) {
+          .px-auth-left  { display: none !important; }
+          .px-auth-right { width: 100% !important; padding: 40px 24px !important; }
+        }
       `}</style>
 
       {/* Left panel — branding */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", borderRight: "1px solid #243746", position: "relative" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", borderRight: "1px solid #243746", position: "relative" }} className="px-auth-left">
         <div style={{ animation: "fadeUp 0.5s ease both", width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", alignItems: "center" }}>
 
           {/* Massive centered wordmark */}
@@ -1388,7 +1416,7 @@ function AuthScreen({ onAuth }) {
       </div>
 
       {/* Right panel — auth form */}
-      <div style={{ width: 480, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", animation: "fadeUp 0.4s ease 0.1s both" }}>
+      <div className="px-auth-right" style={{ width: 480, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", animation: "fadeUp 0.4s ease 0.1s both" }}>
         <div style={{ width: "100%" }}>
           <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 22, color: "#F5F7FA", margin: "0 0 6px" }}>
             {mode === "login" ? "Welcome back." : mode === "signup" ? "Create your account." : "Reset your password."}
