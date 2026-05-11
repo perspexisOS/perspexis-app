@@ -20,8 +20,14 @@ async function callClaude(prompt) {
     body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 2000, messages: [{ role: "user", content: prompt }] })
   });
   const raw = await res.text();
-  const data = JSON.parse(raw);
-  return data.content?.map(i => i.text || "").join("") || "";
+  let data;
+  try { data = JSON.parse(raw); } catch { throw new Error(`Claude parse error: ${raw.slice(0, 200)}`); }
+  if (!res.ok || data.type === "error" || data.error) {
+    throw new Error(data.error?.message || `API error ${res.status}`);
+  }
+  const text = data.content?.map(i => i.text || "").join("") || "";
+  if (!text.trim()) throw new Error("Claude returned an empty response");
+  return text;
 }
 
 // ─── UI Primitives ─────────────────────────────────────────────────────────────
@@ -2258,9 +2264,28 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
     else { await draftObStep(msgs); }
   };
 
+  const logMavenError = async (err, stepKey, inputText) => {
+    try {
+      const errMsg = err?.message || String(err);
+      await supabase.from("maven_errors").insert({
+        user_id: user.id, org_id: user.id, org_name: orgName,
+        error_type: "maven_onboarding", error_message: errMsg,
+        context: stepKey, input_text: (inputText||"").slice(0, 1000),
+      });
+      await supabase.functions.invoke("notify-error", {
+        body: {
+          to: "clkillian89@gmail.com",
+          subject: `Maven Onboarding Error — ${new Date().toLocaleDateString()}`,
+          message: `Maven failed during onboarding.\n\nStep: ${stepKey}\nOrg: ${orgName} (${orgType})\nUser: ${user.email}\nInput: ${inputText}\nError: ${errMsg}\nTime: ${new Date().toISOString()}`,
+        }
+      });
+    } catch { /* never crash the error handler */ }
+  };
+
   const draftObStep = async (msgs) => {
     const step = OB_STEPS[obStep];
     const context = msgs.filter(m=>m.role==='user').map(m=>m.text).join(' | ');
+    const layerName = ['mission','vision','values','positioning'].includes(step.key) ? 'Identity Layer' : step.key === 'people' ? 'People Layer' : 'Rhythm Layer';
     let prompt;
     if (step.key === 'people') {
       prompt = `Parse this team description into a JSON array for ${orgName||"this organization"} (${orgType||"Organization"}).\n\nInput: "${context}"\n\nReturn ONLY a JSON array:\n[{"name":"Full Name or empty","role":"Role Title","type":"leader|director|coordinator|support|pastor","owns":"Responsibilities in 1 sentence","winning":"Success criteria in 1 sentence","reports":"Reports to","vacant":false}]\n\nIf no person is named for a role, set name="" and vacant=true.`;
@@ -2270,14 +2295,21 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
       const isVals = step.key === 'values';
       prompt = `Write a ${step.label} for ${orgName||"this organization"} (${orgType||"Organization"}) based on what they shared.\n\nThey said: "${context}"\n\n${isVals ? 'Write 3-5 core values: VALUE NAME: one-sentence description. One per line, no preamble.' : `Write the ${step.label} in their voice. 1-3 sentences. Specific and genuine. Text only, no preamble.`}`;
     }
-    const draft = await callClaude(prompt);
-    setObDrafts(p => ({...p, [step.key]: draft}));
-    const isParsed = step.key === 'people' || step.key === 'rhythm';
-    const msg = isParsed
-      ? {role:'maven', text:`Got it — I've mapped that out. Click "Continue" to move on, or tell me anything to adjust.`}
-      : {role:'maven', text:`Here's what I heard:\n\n"${draft}"\n\nDoes that capture it? Tell me what to adjust, or say "perfect" to continue.`};
-    setObMsgs(p => [...p, msg]);
-    setObDraftShown(true);
+    try {
+      const draft = await callClaude(prompt);
+      if (!draft.trim()) throw new Error("Empty draft returned");
+      setObDrafts(p => ({...p, [step.key]: draft}));
+      const isParsed = step.key === 'people' || step.key === 'rhythm';
+      const msg = isParsed
+        ? {role:'maven', text:`Got it — I've mapped that out. Click "Continue" to move on, or tell me anything to adjust.`}
+        : {role:'maven', text:`Here's what I heard:\n\n"${draft}"\n\nDoes that capture it? Tell me what to adjust, or say "perfect" to continue.`};
+      setObMsgs(p => [...p, msg]);
+      setObDraftShown(true);
+    } catch (err) {
+      await logMavenError(err, step.key, context);
+      setObMsgs(p => [...p, {role:'maven', text:`I'm sorry — I ran into a little trouble processing that right now. Let's keep moving and you can add your ${step.label} directly in the ${layerName} whenever you're ready. I've noted the issue and our team has been notified.`}]);
+      setObDraftShown(true); // shows the Continue button so they aren't stuck
+    }
     setObLoading(false);
   };
 

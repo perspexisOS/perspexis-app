@@ -68,3 +68,23 @@ DO $$ BEGIN
   CREATE POLICY "user_own_maven" ON public.maven_conversations
     FOR ALL USING (user_id = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ─── Maven Error Logs ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.maven_errors (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  org_id        UUID,
+  org_name      TEXT,
+  error_type    TEXT NOT NULL,
+  error_message TEXT,
+  context       TEXT,
+  input_text    TEXT,
+  resolved      BOOLEAN DEFAULT FALSE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.maven_errors ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "admin_read_errors" ON public.maven_errors FOR ALL USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Index for weekly report queries
+CREATE INDEX IF NOT EXISTS maven_errors_created_idx ON public.maven_errors (created_at DESC);
