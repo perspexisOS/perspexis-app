@@ -2133,166 +2133,346 @@ RESPONSE STYLE:
 }
 
 // ─── Maven Chat Widget ────────────────────────────────────────────────────────
-function MavenChat({ user, orgName, orgType, identity, people, gaps, rhythm, active, setActive, isNewUser, onFirstOpen }) {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-  const [pulse, setPulse] = useState(isNewUser);
-  const bottomRef = useRef(null);
-  const inputRef = useRef(null);
 
-  useEffect(() => { if (open) { inputRef.current?.focus(); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); } }, [open]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+// ─── Maven Experience ─────────────────────────────────────────────────────────
+function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhythm, active, setActive, saveIdentity, addRole, saveRhythm, setRhythmMode, completeTutorial }) {
+  const [phase, setPhase] = useState(null);
+  // null=chat-bubble-only | welcome | tour | onboard-offer | onboard | done
+  const [tourIdx, setTourIdx] = useState(0);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMsgs, setChatMsgs] = useState([]);
+  const [chatLoaded, setChatLoaded] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [obStep, setObStep] = useState(0);
+  const [obMsgs, setObMsgs] = useState([]);
+  const [obDrafts, setObDrafts] = useState({});
+  const [obDraftShown, setObDraftShown] = useState(false);
+  const [obInput, setObInput] = useState('');
+  const [obLoading, setObLoading] = useState(false);
+  const chatBottomRef = useRef(null);
+  const obBottomRef = useRef(null);
 
-  // Auto-open: check server for conversation history on mount
+  const TOUR = [
+    { layer:'identity', icon:'◈', label:'Identity Layer',    msg:"This is your organization's foundation — Mission, Vision, Values, and Positioning. Everything else you build here rests on what you define in this layer. It answers the question: why do you exist?" },
+    { layer:'people',   icon:'◎', label:'People Layer',      msg:"Your org chart lives here. Add every role, define who owns what, and get AI clarity grades on each one. I can also flag structural pressure points — places where your structure is creating friction." },
+    { layer:'rhythm',   icon:'◇', label:'Rhythm Layer',      msg:"Healthy organizations run on healthy rhythms. This is where you map your meeting cadences and communication patterns. I'll grade them and show you exactly what's creating alignment — and what's creating noise." },
+    { layer:'health',   icon:'◉', label:'Health Overview',   msg:"Once all three layers are built, run your POHI analysis here — the Perspexis Organizational Health Index. It's a 6-dimension score that gives you a real picture of where your organization stands and what to do next." },
+  ];
+
+  const OB_STEPS = [
+    { key:'mission',     label:'Mission',              q:(n) => `Let's start with the most important question: Why does ${n || "your organization"} exist? What changes in the world because of what you do? Don't overthink it — just tell me what's in your heart.` },
+    { key:'vision',      label:'North Star Vision',    q:() => "Now paint me a picture 10-20 years from now if everything goes the way you dream. What does that future look like for your organization?" },
+    { key:'values',      label:'Core Values',          q:() => "What are the non-negotiable principles that guide how your team operates? What values would you never compromise on, even under pressure?" },
+    { key:'positioning', label:'Positioning',          q:(n) => `Who is ${n || "your organization"} specifically built to serve, and why would someone choose you over any alternative? What makes you genuinely different?` },
+    { key:'people',      label:'Team Roles',           q:() => "Now let's sketch your team. Tell me the key roles in your organization — something like 'John Smith as Executive Director, Jane as Operations Manager, two open coordinator positions.' Don't worry about perfection." },
+    { key:'rhythm',      label:'Meeting Cadences',     q:() => "Finally — what regular meetings or touchpoints does your team currently have? Walk me through your rhythm. For example: 'Weekly staff meeting Mondays 9am, monthly leadership review...'" },
+  ];
+
+  // Check on mount if user is new (no conversations)
   useEffect(() => {
-    const checkNew = async () => {
+    const checkFirst = async () => {
       const { data } = await supabase.from('maven_conversations').select('id').eq('user_id', user.id).maybeSingle();
-      if (!data) { setOpen(true); setPulse(true); } // No history = new user
+      if (!data) setPhase('welcome');
     };
-    checkNew();
+    checkFirst();
   }, []);
 
-  const load = async () => {
-    if (initialized) return;
-    const { data } = await supabase.from('maven_conversations').select('messages').eq('user_id', user.id).maybeSingle();
-    if (data?.messages?.length > 0) {
-      setMessages(data.messages.slice(-40));
-      setInitialized(true);
-      setPulse(false);
+  useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [chatMsgs, chatLoading]);
+  useEffect(() => { obBottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [obMsgs, obLoading]);
+
+  const startTour = () => { setPhase('tour'); setTourIdx(0); setActive(TOUR[0].layer); };
+  const nextTour = () => {
+    if (tourIdx < TOUR.length - 1) { const n = tourIdx + 1; setTourIdx(n); setActive(TOUR[n].layer); }
+    else { setPhase('onboard-offer'); }
+  };
+  const skipTour = () => setPhase('onboard-offer');
+  const skipAll = () => { setPhase('done'); };
+
+  const startOnboarding = async () => {
+    setPhase('onboard'); setObStep(0); setObDraftShown(false); setObDrafts({});
+    setObMsgs([{ role:'maven', text: OB_STEPS[0].q(orgName) }]);
+  };
+
+  const parseValues = (text) => {
+    if (!text) return [{name:'',desc:''}];
+    return text.split('\n').filter(l=>l.trim()).map(l => {
+      const c = l.replace(/^\d+\.\s*/,''); const idx = c.indexOf(':');
+      return idx > 0 ? {name:c.slice(0,idx).trim(), desc:c.slice(idx+1).trim()} : {name:c.trim(),desc:''};
+    }).filter(v=>v.name).slice(0,6);
+  };
+
+  const sendObMsg = async () => {
+    if (!obInput.trim() || obLoading) return;
+    const userMsg = {role:'user', text:obInput.trim()};
+    const msgs = [...obMsgs, userMsg];
+    setObMsgs(msgs); setObInput(''); setObLoading(true);
+    if (obDraftShown) { await refineOrAdvance(msgs); }
+    else { await draftObStep(msgs); }
+  };
+
+  const draftObStep = async (msgs) => {
+    const step = OB_STEPS[obStep];
+    const context = msgs.filter(m=>m.role==='user').map(m=>m.text).join(' | ');
+    let prompt;
+    if (step.key === 'people') {
+      prompt = `Parse this team description into a JSON array for ${orgName||"this organization"} (${orgType||"Organization"}).\n\nInput: "${context}"\n\nReturn ONLY a JSON array:\n[{"name":"Full Name or empty","role":"Role Title","type":"leader|director|coordinator|support|pastor","owns":"Responsibilities in 1 sentence","winning":"Success criteria in 1 sentence","reports":"Reports to","vacant":false}]\n\nIf no person is named for a role, set name="" and vacant=true.`;
+    } else if (step.key === 'rhythm') {
+      prompt = `Parse this meeting description into a rhythm JSON for ${orgName||"this organization"}.\n\nInput: "${context}"\n\nReturn ONLY:\n{"current_state":"One sentence about their current rhythm","cadences":[{"name":"Meeting Name","freq":"Frequency","dur":"Duration","who":"Who attends","purpose":"Purpose"}],"breaks":"Any communication gaps mentioned or empty string"}`;
     } else {
-      // No history = brand new user regardless of localStorage
-      await welcome(true);
+      const isVals = step.key === 'values';
+      prompt = `Write a ${step.label} for ${orgName||"this organization"} (${orgType||"Organization"}) based on what they shared.\n\nThey said: "${context}"\n\n${isVals ? 'Write 3-5 core values: VALUE NAME: one-sentence description. One per line, no preamble.' : `Write the ${step.label} in their voice. 1-3 sentences. Specific and genuine. Text only, no preamble.`}`;
     }
+    const draft = await callClaude(prompt);
+    setObDrafts(p => ({...p, [step.key]: draft}));
+    const isParsed = step.key === 'people' || step.key === 'rhythm';
+    const msg = isParsed
+      ? {role:'maven', text:`Got it — I've mapped that out. Click "Continue" to move on, or tell me anything to adjust.`}
+      : {role:'maven', text:`Here's what I heard:\n\n"${draft}"\n\nDoes that capture it? Tell me what to adjust, or say "perfect" to continue.`};
+    setObMsgs(p => [...p, msg]);
+    setObDraftShown(true);
+    setObLoading(false);
   };
 
-  useEffect(() => { if (open) load(); }, [open]);
-
-  const save = async (msgs) => {
-    await supabase.from('maven_conversations').upsert({ user_id: user.id, org_id: user.id, messages: msgs.slice(-60), updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  const refineOrAdvance = async (msgs) => {
+    const step = OB_STEPS[obStep];
+    const feedback = msgs[msgs.length-1].text.toLowerCase();
+    const ok = ['perfect','yes','great','looks good','correct','that\'s it','yep','yeah','good','ok','okay','continue','next','move on'].some(w=>feedback.includes(w));
+    if (ok || step.key === 'people' || step.key === 'rhythm') {
+      await advanceStep();
+    } else {
+      const old = obDrafts[step.key] || '';
+      const refined = await callClaude(`Refine based on feedback.\nCurrent: "${old}"\nFeedback: "${msgs[msgs.length-1].text}"\nWrite the improved version only.`);
+      setObDrafts(p => ({...p, [step.key]: refined}));
+      setObMsgs(p => [...p, {role:'maven', text:`Updated:\n\n"${refined}"\n\nBetter?`}]);
+    }
+    setObLoading(false);
   };
 
-  const welcome = async (isNew) => {
-    setLoading(true);
-    if (onFirstOpen) onFirstOpen();
-    const complete = [identity?.mission, people?.length > 0, rhythm?.cadences?.length > 0].filter(Boolean).length;
-    const extra = isNew
-      ? `This is the very first time this user is meeting you. Welcome them warmly to Perspexis — like welcoming a client into their new organizational home. In 2-3 warm, conversational sentences: tell them what Perspexis will do for their organization, and offer them either a guided tour of the platform or to jump right in and start building. Make them feel excited and at home.`
-      : `The user is returning. Give a warm, brief welcome back. Reference "${orgName || 'their organization'}" by name. ${complete > 0 ? `They've completed ${complete}/3 layers.` : 'They haven\'t set up any layers yet.'} Ask what they want to work on today, or proactively suggest something based on their data.`;
-    const r = await callClaude(buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, []) + '\n\n' + extra);
-    const msg = { role: 'maven', text: r, ts: Date.now() };
-    const msgs = [msg];
-    setMessages(msgs);
-    await save(msgs);
-    setInitialized(true);
-    setPulse(false);
-    setLoading(false);
+  const transitions = {mission:'Love it.',vision:'Powerful.',values:'Those are solid.',positioning:'Crystal clear.',people:'Team is mapped.',rhythm:'Rhythm is set.'};
+
+  const advanceStep = async () => {
+    if (obStep + 1 >= OB_STEPS.length) { await applyAll(); return; }
+    const next = obStep + 1;
+    const t = transitions[OB_STEPS[obStep].key] || 'Perfect.';
+    setObStep(next); setObDraftShown(false);
+    setObMsgs(p => [...p, {role:'maven', text:`${t} ${OB_STEPS[next].q(orgName)}`}]);
+    setObLoading(false);
   };
 
-  const process = (text) => {
-    const m = text.match(/^\[NAVIGATE:(\w+)\]/);
-    if (m && ['identity','people','rhythm','health'].includes(m[1])) { setActive(m[1]); }
-    return text.replace(/^\[NAVIGATE:\w+\]\s?/, '');
+  const applyAll = async () => {
+    setObLoading(true);
+    setObMsgs(p => [...p, {role:'maven', text:"Adding everything to your layers now..."}]);
+    try {
+      const id = { mission:obDrafts.mission||'', vision_north:obDrafts.vision||'', vision_phase:'', values:parseValues(obDrafts.values||''), positioning:obDrafts.positioning||'' };
+      await saveIdentity(id); setActive('identity');
+    } catch(e) {}
+    try {
+      const roles = JSON.parse((obDrafts.people||'').match(/\[[\s\S]*\]/)?.[0]||'[]');
+      for (const r of roles) { try { await addRole(r); } catch(e) {} }
+    } catch(e) {}
+    try {
+      const rhy = JSON.parse((obDrafts.rhythm||'').match(/\{[\s\S]*\}/)?.[0]||'{}');
+      if (rhy.cadences?.length) { await saveRhythm({current:rhy.current_state||'',cadences:rhy.cadences,breaks:rhy.breaks||''}); if (setRhythmMode) setRhythmMode('view'); }
+    } catch(e) {}
+    setObLoading(false);
+    setObMsgs(p => [...p, {role:'maven', text:"✓ Identity layer — done.\n✓ Team roles — added.\n✓ Rhythm cadences — in place.\n\nYou're up and running. I'll be in the bottom-right corner whenever you need me — click the ✦ button."}]);
+    setTimeout(() => { setPhase('done'); if (completeTutorial) completeTutorial(); }, 3500);
   };
 
-  const send = async (overrideText) => {
-    const txt = (overrideText || input).trim();
-    if (!txt || loading) return;
-    const userMsg = { role: 'user', text: txt, ts: Date.now() };
-    const newMsgs = [...messages, userMsg];
-    setMessages(newMsgs);
-    setInput('');
-    setLoading(true);
-    const extra = `\nUser is currently on: ${active} layer\n\nRespond to their last message. Be Maven.`;
-    const r = await callClaude(buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, newMsgs) + extra);
-    const clean = process(r);
-    const mavenMsg = { role: 'maven', text: clean, ts: Date.now() };
-    const final = [...newMsgs, mavenMsg];
-    setMessages(final);
-    await save(final);
-    setLoading(false);
+  // Ongoing chat
+  const loadChat = async () => {
+    if (chatLoaded) return;
+    const {data} = await supabase.from('maven_conversations').select('messages').eq('user_id', user.id).maybeSingle();
+    if (data?.messages?.length > 0) { setChatMsgs(data.messages.slice(-30)); }
+    else {
+      setChatLoading(true);
+      const r = await callClaude(buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, []) + '\n\nThe user just opened your chat. Welcome them warmly and ask what you can help with. 2 sentences max.');
+      const msg = {role:'maven', text:r, ts:Date.now()};
+      setChatMsgs([msg]);
+      await supabase.from('maven_conversations').upsert({user_id:user.id, org_id:user.id, messages:[msg], updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      setChatLoading(false);
+    }
+    setChatLoaded(true);
   };
 
-  const suggestions = [
-    !identity?.mission && 'Help me define my Identity',
-    !people?.length && 'Let\'s build my org chart',
-    !rhythm?.cadences?.length && 'Set up my Rhythm layer',
-    identity?.mission && people?.length && rhythm?.cadences?.length && 'Run a POHI health analysis',
-    'Give me a tour of Perspexis',
-  ].filter(Boolean).slice(0, 3);
+  const sendChat = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const uMsg = {role:'user', text:chatInput.trim(), ts:Date.now()};
+    const msgs = [...chatMsgs, uMsg];
+    setChatMsgs(msgs); setChatInput(''); setChatLoading(true);
+    const r = await callClaude(buildMavenPrompt(user, orgName, orgType, identity, people, gaps, rhythm, msgs) + `\n\nCurrently on: ${active} layer.\nRespond helpfully. Include [NAVIGATE:layer] at start if navigating (identity/people/rhythm/health).`);
+    const clean = r.replace(/^\[NAVIGATE:(\w+)\]\s?/,(_,l)=>{if(['identity','people','rhythm','health'].includes(l))setActive(l);return '';});
+    const mMsg = {role:'maven', text:clean, ts:Date.now()};
+    const final = [...msgs, mMsg];
+    setChatMsgs(final);
+    await supabase.from('maven_conversations').upsert({user_id:user.id, org_id:user.id, messages:final.slice(-50), updated_at:new Date().toISOString()},{onConflict:'user_id'});
+    setChatLoading(false);
+  };
 
-  const mvnBubble = { background: 'rgba(242,103,81,0.07)', border: '1px solid rgba(242,103,81,0.18)', borderRadius: '4px 14px 14px 14px', padding: '12px 16px', maxWidth: '82%' };
-  const usrBubble = { background: 'rgba(110,231,216,0.07)', border: '1px solid rgba(110,231,216,0.18)', borderRadius: '14px 4px 14px 14px', padding: '12px 16px', maxWidth: '82%', marginLeft: 'auto' };
+  useEffect(() => { if (chatOpen) loadChat(); }, [chatOpen]);
+
+  const mvn = {background:'rgba(242,103,81,0.07)', border:'1px solid rgba(242,103,81,0.18)', borderRadius:'4px 14px 14px 14px', padding:'12px 16px', maxWidth:'85%'};
+  const usr = {background:'rgba(110,231,216,0.07)', border:'1px solid rgba(110,231,216,0.18)', borderRadius:'14px 4px 14px 14px', padding:'12px 16px', maxWidth:'85%', marginLeft:'auto'};
+  const Dots = () => <div style={{display:'flex',gap:5}}>{[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:'50%',background:'#F26751',animation:`arcFade 1.2s ease ${i*0.2}s infinite`}}/>)}</div>;
+  const MvnLabel = () => <p style={{fontSize:8,fontFamily:MONO,color:'#F26751',textTransform:'uppercase',letterSpacing:1.5,margin:'0 0 5px'}}>✦ Maven</p>;
 
   return (
     <>
-      {/* Floating button */}
-      <div style={{ position: 'fixed', bottom: open ? -100 : 24, right: 24, zIndex: 600, transition: 'bottom 0.3s ease' }}>
-        <button onClick={() => setOpen(true)} style={{ width: 54, height: 54, borderRadius: '50%', background: 'var(--accent)', border: '2px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 20px rgba(242,103,81,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, position: 'relative' }}>
-          ✦
-          {pulse && <div style={{ position: 'absolute', top: -3, right: -3, width: 14, height: 14, borderRadius: '50%', background: '#2EC4B6', border: '2px solid #071827', animation: 'arcFade 1.5s ease infinite' }} />}
-        </button>
-      </div>
-
-      {/* Chat panel */}
-      {open && (
-        <div className="px-maven-panel" style={{ position: 'fixed', bottom: 0, right: 0, width: 400, height: '100vh', background: '#0B1E2E', borderLeft: '1px solid var(--border)', zIndex: 599, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,0.4)', animation: 'fadeUp 0.25s ease both' }}>
-          {/* Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'rgba(16,37,52,0.8)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(242,103,81,0.15)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✦</div>
-              <div>
-                <p style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Maven</p>
-                <p style={{ fontFamily: MONO, fontSize: 8, color: loading ? '#F26751' : '#2EC4B6', margin: 0, textTransform: 'uppercase', letterSpacing: 1.5 }}>{loading ? 'Thinking...' : 'Your Perspexis Guide'}</p>
-              </div>
+      {/* ── Welcome ── */}
+      {phase==='welcome' && (
+        <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.95)',backdropFilter:'blur(10px)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div style={{background:'#0D2236',border:'1px solid rgba(242,103,81,0.25)',borderRadius:18,padding:'44px 48px',maxWidth:540,width:'100%',textAlign:'center',animation:'fadeUp 0.5s ease both',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
+            <div style={{width:64,height:64,borderRadius:'50%',background:'rgba(242,103,81,0.12)',border:'2px solid rgba(242,103,81,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 24px'}}>✦</div>
+            <h2 style={{fontFamily:DISPLAY,fontSize:26,fontWeight:700,color:'#F5F7FA',margin:'0 0 16px'}}>Welcome to Perspexis.</h2>
+            <p style={{fontFamily:BODY,fontSize:15,color:'#94A3B8',lineHeight:1.85,margin:'0 0 32px'}}>I'm Maven — your organizational clarity guide. You've just stepped into your new home, and I'm here to help you build something remarkable inside it.<br/><br/>Let me show you around, then I'll help you get set up.</p>
+            <div style={{display:'flex',gap:12,justifyContent:'center'}}>
+              <Btn secondary small onClick={skipAll}>Skip for Now</Btn>
+              <Btn onClick={startTour}>Show Me Around →</Btn>
             </div>
-            <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 10px', fontFamily: MONO, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1 }}>✕</button>
-          </div>
-
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {messages.map((m, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'maven' ? 'flex-start' : 'flex-end' }}>
-                {m.role === 'maven' && <p style={{ fontSize: 8, fontFamily: MONO, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1.5, margin: '0 0 4px' }}>✦ Maven</p>}
-                <div style={m.role === 'maven' ? mvnBubble : usrBubble}>
-                  <p style={{ fontSize: 13, fontFamily: BODY, color: 'var(--text-primary)', margin: 0, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{m.text}</p>
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div>
-                <p style={{ fontSize: 8, fontFamily: MONO, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1.5, margin: '0 0 4px' }}>✦ Maven</p>
-                <div style={mvnBubble}><div style={{ display: 'flex', gap: 5 }}>{[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `arcFade 1.2s ease ${i*0.2}s infinite` }} />)}</div></div>
-              </div>
-            )}
-            {/* Quick suggestions */}
-            {!loading && messages.length <= 2 && suggestions.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                {suggestions.map(s => (
-                  <button key={s} onClick={() => send(s)} style={{ padding: '8px 14px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', fontFamily: BODY, fontSize: 12, cursor: 'pointer', textAlign: 'left' }}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Input */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0, background: 'rgba(16,37,52,0.6)' }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="Ask Maven anything…" rows={2} style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontFamily: BODY, fontSize: 13, outline: 'none', resize: 'none' }} />
-              <button onClick={() => send()} disabled={loading || !input.trim()} style={{ padding: '10px 14px', background: input.trim() && !loading ? 'var(--accent)' : 'rgba(255,255,255,0.04)', border: 'none', borderRadius: 8, color: input.trim() && !loading ? '#071827' : 'var(--text-secondary)', fontFamily: DISPLAY, fontSize: 10, fontWeight: 700, cursor: input.trim() && !loading ? 'pointer' : 'default' }}>→</button>
-            </div>
-            <p style={{ fontSize: 9, fontFamily: MONO, color: 'var(--text-muted)', margin: '6px 0 0', textTransform: 'uppercase', letterSpacing: 1 }}>Enter to send · Shift+Enter for new line</p>
           </div>
         </div>
+      )}
+
+      {/* ── Tour ── */}
+      {phase==='tour' && (
+        <>
+          <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.45)',backdropFilter:'blur(2px)',zIndex:798}} />
+          <div style={{position:'fixed',bottom:28,left:'50%',transform:'translateX(-50%)',width:'90%',maxWidth:540,zIndex:799,animation:'fadeUp 0.3s ease both'}}>
+            <div style={{background:'#0D2236',border:'1px solid rgba(242,103,81,0.22)',borderRadius:14,padding:'24px 28px',boxShadow:'0 16px 60px rgba(0,0,0,0.6)'}}>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(242,103,81,0.12)',border:'1px solid rgba(242,103,81,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>✦</div>
+                <div>
+                  <p style={{fontFamily:MONO,fontSize:9,color:'#F26751',textTransform:'uppercase',letterSpacing:1.5,margin:0}}>Maven · {tourIdx+1} of {TOUR.length}</p>
+                  <p style={{fontFamily:DISPLAY,fontSize:15,fontWeight:700,color:'#F5F7FA',margin:'3px 0 0'}}>{TOUR[tourIdx].icon} {TOUR[tourIdx].label}</p>
+                </div>
+              </div>
+              <p style={{fontFamily:BODY,fontSize:13,color:'#94A3B8',lineHeight:1.8,margin:'0 0 20px'}}>{TOUR[tourIdx].msg}</p>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <button onClick={skipTour} style={{background:'none',border:'none',color:'#94A3B8',fontFamily:MONO,fontSize:9,textTransform:'uppercase',letterSpacing:1,cursor:'pointer'}}>Skip Tour</button>
+                <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                  <div style={{display:'flex',gap:5}}>{TOUR.map((_,i)=><div key={i} style={{width:i===tourIdx?18:5,height:5,borderRadius:3,background:i<=tourIdx?'#F26751':'#243746',transition:'all 0.3s'}}/>)}</div>
+                  <Btn small onClick={nextTour}>{tourIdx===TOUR.length-1?'Finish Tour →':'Next →'}</Btn>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Onboarding offer ── */}
+      {phase==='onboard-offer' && (
+        <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.95)',backdropFilter:'blur(8px)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div style={{background:'#0D2236',border:'1px solid rgba(242,103,81,0.25)',borderRadius:18,padding:'44px 48px',maxWidth:540,width:'100%',textAlign:'center',animation:'fadeUp 0.4s ease both',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
+            <div style={{fontSize:36,marginBottom:20}}>✦</div>
+            <h3 style={{fontFamily:DISPLAY,fontSize:22,fontWeight:700,color:'#F5F7FA',margin:'0 0 14px'}}>That's the full tour.</h3>
+            <p style={{fontFamily:BODY,fontSize:14,color:'#94A3B8',lineHeight:1.85,margin:'0 0 32px'}}>Want me to help you set up your organization right now? I'll ask a few simple questions and fill in your Identity, People, and Rhythm layers for you — all in one conversation.</p>
+            <div style={{display:'flex',gap:12,justifyContent:'center'}}>
+              <Btn secondary small onClick={skipAll}>I'll Do It Myself</Btn>
+              <Btn onClick={startOnboarding}>Let's Build It Together →</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Onboarding ── */}
+      {phase==='onboard' && (
+        <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.97)',backdropFilter:'blur(12px)',zIndex:800,display:'flex',flexDirection:'column',fontFamily:DISPLAY}}>
+          <div style={{padding:'16px 28px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(242,103,81,0.15)',border:'1px solid rgba(242,103,81,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15}}>✦</div>
+              <div>
+                <p style={{fontFamily:DISPLAY,fontSize:14,fontWeight:700,color:'#F5F7FA',margin:0}}>Maven · Building {orgName||'Your Organization'}</p>
+                <p style={{fontFamily:MONO,fontSize:9,color:obLoading?'#F26751':'#2EC4B6',margin:0,textTransform:'uppercase',letterSpacing:1.5}}>{obLoading?'Working...':`Step ${obStep+1} of ${OB_STEPS.length} — ${OB_STEPS[obStep]?.label}`}</p>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:5}}>{OB_STEPS.map((s,i)=><div key={s.key} style={{width:5,height:5,borderRadius:'50%',background:i<obStep?'#2EC4B6':i===obStep?'#F26751':'#243746',transition:'all 0.3s'}}/>)}</div>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'28px',display:'flex',flexDirection:'column',gap:14,maxWidth:680,margin:'0 auto',width:'100%'}}>
+            {obMsgs.map((m,i)=>(
+              <div key={i} style={{display:'flex',flexDirection:'column',alignItems:m.role==='maven'?'flex-start':'flex-end'}}>
+                {m.role==='maven' && <MvnLabel/>}
+                <div style={m.role==='maven'?mvn:usr}><p style={{fontSize:14,fontFamily:BODY,color:'#F5F7FA',margin:0,lineHeight:1.8,whiteSpace:'pre-wrap'}}>{m.text}</p></div>
+              </div>
+            ))}
+            {obLoading && <div><MvnLabel/><div style={mvn}><Dots/></div></div>}
+            <div ref={obBottomRef}/>
+          </div>
+          <div style={{padding:'16px 28px',borderTop:'1px solid rgba(255,255,255,0.06)',flexShrink:0,maxWidth:680,margin:'0 auto',width:'100%'}}>
+            {obDraftShown && !obLoading && (OB_STEPS[obStep]?.key==='people'||OB_STEPS[obStep]?.key==='rhythm') ? (
+              <button onClick={()=>{ setObLoading(true); advanceStep(); }} style={{display:'block',width:'100%',padding:'12px',background:'rgba(46,196,182,0.08)',border:'1px solid rgba(46,196,182,0.25)',borderRadius:8,color:'#2EC4B6',fontFamily:MONO,fontSize:10,textTransform:'uppercase',letterSpacing:1.5,cursor:'pointer'}}>✓ Continue →</button>
+            ) : obDraftShown && !obLoading ? (
+              <div style={{display:'flex',gap:10,marginBottom:10}}>
+                <button onClick={()=>{ setObLoading(true); const msgs=[...obMsgs,{role:'user',text:'perfect'}]; setObMsgs(msgs); refineOrAdvance(msgs); }} style={{flex:1,padding:'10px',background:'rgba(46,196,182,0.08)',border:'1px solid rgba(46,196,182,0.25)',borderRadius:8,color:'#2EC4B6',fontFamily:MONO,fontSize:10,textTransform:'uppercase',letterSpacing:1.5,cursor:'pointer'}}>✓ That's Perfect — Move On</button>
+              </div>
+            ) : null}
+            {!obLoading && (
+              <div style={{display:'flex',gap:10}}>
+                <textarea value={obInput} onChange={e=>setObInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendObMsg();}}} placeholder="Type your response… (Enter to send)" rows={3} style={{flex:1,padding:'12px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'#F5F7FA',fontFamily:BODY,fontSize:14,outline:'none',resize:'none'}}/>
+                <button onClick={sendObMsg} disabled={!obInput.trim()} style={{padding:'12px 18px',background:obInput.trim()?'#F26751':'rgba(255,255,255,0.04)',border:'none',borderRadius:8,color:obInput.trim()?'#071827':'#94A3B8',fontFamily:DISPLAY,fontSize:12,fontWeight:700,cursor:obInput.trim()?'pointer':'default'}}>→</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Done ── */}
+      {phase==='done' && (
+        <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.95)',backdropFilter:'blur(8px)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div style={{background:'#0D2236',border:'1px solid rgba(46,196,182,0.25)',borderRadius:18,padding:'44px 48px',maxWidth:500,width:'100%',textAlign:'center',animation:'fadeUp 0.4s ease both',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
+            <div style={{fontSize:44,marginBottom:20}}>🏠</div>
+            <h3 style={{fontFamily:DISPLAY,fontSize:22,fontWeight:700,color:'#F5F7FA',margin:'0 0 14px'}}>You're home.</h3>
+            <p style={{fontFamily:BODY,fontSize:14,color:'#94A3B8',lineHeight:1.85,margin:'0 0 24px'}}>Your organizational operating system is ready. I'll be right here whenever you need me.</p>
+            <div style={{padding:'16px 20px',background:'rgba(242,103,81,0.08)',border:'1px solid rgba(242,103,81,0.2)',borderRadius:10,marginBottom:28,display:'flex',alignItems:'center',gap:14}}>
+              <div style={{width:44,height:44,borderRadius:'50%',background:'#F26751',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>✦</div>
+              <p style={{fontFamily:BODY,fontSize:13,color:'#F5F7FA',margin:0,textAlign:'left',lineHeight:1.65}}>Find me in the <strong>bottom-right corner</strong>. Click the ✦ button anytime to chat, get help, or run an analysis.</p>
+            </div>
+            <Btn onClick={()=>setPhase(null)}>Take Me to My Dashboard →</Btn>
+          </div>
+        </div>
+      )}
+
+      {/* ── Chat bubble + popover ── */}
+      {phase===null && (
+        <>
+          <button onClick={()=>setChatOpen(o=>!o)} style={{position:'fixed',bottom:24,right:24,width:54,height:54,borderRadius:'50%',background:'#F26751',border:'2px solid rgba(255,255,255,0.15)',boxShadow:'0 4px 20px rgba(242,103,81,0.45)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,zIndex:600,transition:'transform 0.2s'}} onMouseEnter={e=>e.target.style.transform='scale(1.08)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}>✦</button>
+          {chatOpen && (
+            <div style={{position:'fixed',bottom:90,right:24,width:370,height:500,background:'#0B1E2E',border:'1px solid var(--border)',borderRadius:16,zIndex:601,display:'flex',flexDirection:'column',boxShadow:'-4px -4px 40px rgba(0,0,0,0.5)',animation:'fadeUp 0.2s ease both',overflow:'hidden'}}>
+              <div style={{padding:'13px 16px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:9}}>
+                  <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(242,103,81,0.15)',border:'1px solid rgba(242,103,81,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>✦</div>
+                  <div>
+                    <p style={{fontFamily:DISPLAY,fontSize:13,fontWeight:700,color:'var(--text-primary)',margin:0}}>Maven</p>
+                    <p style={{fontFamily:MONO,fontSize:8,color:chatLoading?'#F26751':'#2EC4B6',margin:0,textTransform:'uppercase',letterSpacing:1.5}}>{chatLoading?'Thinking...':'Your Perspexis Guide'}</p>
+                  </div>
+                </div>
+                <button onClick={()=>setChatOpen(false)} style={{background:'none',border:'none',color:'var(--text-secondary)',cursor:'pointer',fontSize:18,lineHeight:1}}>×</button>
+              </div>
+              <div style={{flex:1,overflowY:'auto',padding:'14px',display:'flex',flexDirection:'column',gap:10}}>
+                {chatMsgs.map((m,i)=>(
+                  <div key={i} style={{display:'flex',flexDirection:'column',alignItems:m.role==='maven'?'flex-start':'flex-end'}}>
+                    {m.role==='maven' && <p style={{fontSize:8,fontFamily:MONO,color:'#F26751',textTransform:'uppercase',letterSpacing:1.5,margin:'0 0 4px'}}>✦ Maven</p>}
+                    <div style={m.role==='maven'?{...mvn,maxWidth:'90%'}:{...usr,maxWidth:'90%'}}><p style={{fontSize:12,fontFamily:BODY,color:'var(--text-primary)',margin:0,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{m.text}</p></div>
+                  </div>
+                ))}
+                {chatLoading && <div><p style={{fontSize:8,fontFamily:MONO,color:'#F26751',textTransform:'uppercase',letterSpacing:1.5,margin:'0 0 4px'}}>✦ Maven</p><div style={{...mvn,maxWidth:'90%'}}><Dots/></div></div>}
+                <div ref={chatBottomRef}/>
+              </div>
+              <div style={{padding:'10px 12px',borderTop:'1px solid var(--border)',flexShrink:0}}>
+                <div style={{display:'flex',gap:8}}>
+                  <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendChat()} placeholder="Ask Maven anything…" style={{flex:1,padding:'9px 12px',background:'rgba(255,255,255,0.05)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text-primary)',fontFamily:BODY,fontSize:12,outline:'none'}}/>
+                  <button onClick={sendChat} disabled={chatLoading||!chatInput.trim()} style={{padding:'9px 14px',background:chatInput.trim()&&!chatLoading?'#F26751':'rgba(255,255,255,0.04)',border:'none',borderRadius:8,color:chatInput.trim()&&!chatLoading?'#071827':'#94A3B8',fontFamily:DISPLAY,fontSize:10,fontWeight:700,cursor:chatInput.trim()&&!chatLoading?'pointer':'default'}}>→</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </>
   );
 }
+
+
 
 // ─── Stripe Pricing Tiers ───────────────────────────────────────────────────
 // Setup: stripe.com → Products → create Core, Growth, Scale with trial periods
@@ -2882,7 +3062,7 @@ function PerspexisCore() {
       </div>
 {showPricing && <PricingPage user={user} onClose={() => setShowPricing(false)} />}
       {/* Maven widget — always available */}
-      <MavenChat user={user} orgName={orgName} orgType={orgType} identity={identity} people={people} gaps={gaps} rhythm={rhythm} active={active} setActive={setActive} isNewUser={tutorialStep !== null} onFirstOpen={completeTutorial} />
+      <MavenExperience user={user} orgName={orgName} orgType={orgType} identity={identity} people={people} gaps={gaps} rhythm={rhythm} active={active} setActive={setActive} saveIdentity={saveIdentity} addRole={addRole} saveRhythm={saveRhythm} setRhythmMode={setRhythmMode} completeTutorial={completeTutorial} />
       {/* Mobile bottom nav */}
       <div className="px-bottom-nav" style={{ display: "none" }}>
         {LAYERS.map(l => (
