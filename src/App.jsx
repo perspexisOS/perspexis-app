@@ -179,15 +179,15 @@ function IdentityEdit({ data, onSave, onCancel, isSetup, orgName, orgType, onMav
         ["Phase 1 Vision", "vision_phase", 100, "What does success look like in your next major chapter? Set a specific timeframe and measurable outcomes."],
         ["Positioning Statement", "positioning", 120, "Who do you serve, what do you uniquely offer, and why would someone choose you over the alternatives?"],
       ].map(([label, key, h, explainer]) => (
-        <div key={key} style={{ marginBottom: 18 }}>
+        <div key={key} id={`maven-id-${key}`} style={{ marginBottom: 18 }}>
           <Label>{label}</Label>
           <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 8px", lineHeight: 1.55 }}>{explainer}</p>
           <textarea value={d[key] || ""} onChange={e => set(key, e.target.value)} style={{ ...ta, minHeight: h }} />
         </div>
       ))}
 
-      <Label>Core Values</Label>
-      <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 12px", lineHeight: 1.55 }}>The non-negotiable principles that guide how your team makes decisions and operates.</p>
+      <div id="maven-id-values"><Label>Core Values</Label>
+      <p style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "'Inter', sans-serif", margin: "-2px 0 12px", lineHeight: 1.55 }}>The non-negotiable principles that guide how your team makes decisions and operates.</p></div>
       {d.values.map((v, i) => (
         <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)", padding: 14, marginBottom: 10 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }} className="px-grid-2">
@@ -337,7 +337,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
   return (
     <div>
       {/* Add Role */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div id="maven-people-add" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <Btn secondary small onClick={() => setAddingRole(true)}>+ Add Role</Btn>
       </div>
       {addingRole && (
@@ -365,7 +365,7 @@ If you have enough information, respond with ONLY this JSON (no markdown, no bac
       )}
 
       {/* Grade Banner */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }} className="px-grade-banner">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22, padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 1px 8px rgba(0,0,0,0.3)", borderRadius: 6, boxShadow: "0 1px 8px rgba(0,0,0,0.3)" }} className="px-grade-banner" id="maven-people-grade">
         <div>
           {overallScore !== null ? (
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -576,7 +576,7 @@ function RhythmSetup({ onDone }) {
   const steps = ["Current State", "New Rhythms", "Breakdown"];
 
   return (
-    <div>
+    <div id="maven-rhythm-setup">
       <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
         {steps.map((s, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : "none" }}>
@@ -918,7 +918,7 @@ Return ONLY raw JSON, no markdown, no backticks:
   return (
     <div>
       {/* POHI Banner */}
-      <div style={{ padding: "24px 28px", background: "var(--surface)", border: `1px solid ${pohi ? `${scoreColor(pohi.overall)}25` : "var(--border)"}`, borderRadius: 12, marginBottom: 24 }}>
+      <div id="maven-pohi-banner" style={{ padding: "24px 28px", background: "var(--surface)", border: `1px solid ${pohi ? `${scoreColor(pohi.overall)}25` : "var(--border)"}`, borderRadius: 12, marginBottom: 24 }}>
         {pohi ? (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -2134,6 +2134,27 @@ RESPONSE STYLE:
 
 // ─── Maven Chat Widget ────────────────────────────────────────────────────────
 
+
+// ─── Maven Mascot ─────────────────────────────────────────────────────────────
+function MavenMascot({ size = 52 }) {
+  const bars = [0.38, 0.62, 0.88, 1, 0.88, 0.62, 0.38];
+  const bw = Math.max(3, Math.round(size * 0.054));
+  const gap = Math.max(2, Math.round(size * 0.038));
+  return (
+    <div style={{ width: size, height: size, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {[0.9, 0.7].map((r, i) => (
+        <div key={i} style={{ position: 'absolute', width: size*r, height: size*r, borderRadius: '50%', border: `1px solid rgba(242,103,81,${0.38-i*0.12})`, animation: `maven-ring ${1.8+i*0.7}s ease-in-out ${i*0.35}s infinite` }} />
+      ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap, zIndex: 1 }}>
+        {bars.map((h, i) => (
+          <div key={i} style={{ width: bw, height: size*0.4*h, background: 'linear-gradient(to top,#CC5A4A,#F26751,#FF9B8E)', borderRadius: bw, animation: `maven-bar ${0.5+(i%4)*0.13}s ease-in-out ${i*0.07}s infinite alternate`, opacity: 0.65+h*0.35 }} />
+        ))}
+      </div>
+      <div style={{ position: 'absolute', width: size*0.46, height: size*0.46, borderRadius: '50%', background: 'radial-gradient(circle,rgba(242,103,81,0.22) 0%,transparent 70%)', animation: 'maven-glow 2.6s ease-in-out infinite' }} />
+    </div>
+  );
+}
+
 // ─── Maven Experience ─────────────────────────────────────────────────────────
 function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhythm, active, setActive, saveIdentity, addRole, saveRhythm, setRhythmMode, completeTutorial }) {
   const [phase, setPhase] = useState(null);
@@ -2151,13 +2172,21 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
   const [obInput, setObInput] = useState('');
   const [obLoading, setObLoading] = useState(false);
   const chatBottomRef = useRef(null);
+  const [highlightRect, setHighlightRect] = useState(null);
   const obBottomRef = useRef(null);
 
   const TOUR = [
-    { layer:'identity', icon:'◈', label:'Identity Layer',    msg:"This is your organization's foundation — Mission, Vision, Values, and Positioning. Everything else you build here rests on what you define in this layer. It answers the question: why do you exist?" },
-    { layer:'people',   icon:'◎', label:'People Layer',      msg:"Your org chart lives here. Add every role, define who owns what, and get AI clarity grades on each one. I can also flag structural pressure points — places where your structure is creating friction." },
-    { layer:'rhythm',   icon:'◇', label:'Rhythm Layer',      msg:"Healthy organizations run on healthy rhythms. This is where you map your meeting cadences and communication patterns. I'll grade them and show you exactly what's creating alignment — and what's creating noise." },
-    { layer:'health',   icon:'◉', label:'Health Overview',   msg:"Once all three layers are built, run your POHI analysis here — the Perspexis Organizational Health Index. It's a 6-dimension score that gives you a real picture of where your organization stands and what to do next." },
+    { layer:'identity', id:null,                  icon:'◈', label:'Identity Layer',         msg:"This is the foundation of your organizational home. Everything else is built on what you define here. Let me walk you through each element..." },
+    { layer:'identity', id:'maven-id-mission',    icon:'◈', label:'Mission',                msg:"Your Mission is the 'why' behind everything you do — the problem you exist to solve. It should be compelling and specific, something you'll always be working toward but will never fully achieve. Put your deepest 'why' here." },
+    { layer:'identity', id:'maven-id-vision_north',icon:'◈',label:'North Star Vision',      msg:"Your North Star Vision is where you're going — the long-term destination, 10-20 years out. It should be ambitious enough to inspire and clear enough to guide decisions. Paint the picture of the world you're building toward." },
+    { layer:'identity', id:'maven-id-vision_phase',icon:'◈',label:'Phase 1 Vision',        msg:"Phase 1 Vision brings your dream to the near term. What does winning look like in the next 1-3 years? Be specific — include milestones, numbers, and things you could actually point to." },
+    { layer:'identity', id:'maven-id-values',     icon:'◈', label:'Core Values',            msg:"Core Values are your non-negotiables — the principles your team operates by under pressure, not just when it's easy. They should be distinctive to you, not generic buzzwords. These guide hiring, decisions, and culture." },
+    { layer:'identity', id:'maven-id-positioning',icon:'◈', label:'Positioning Statement',  msg:"Positioning answers: who do you serve, what do you uniquely offer, and why would someone choose you over every alternative? This sharpens your marketing, your hiring pitch, and your strategy." },
+    { layer:'people',   id:null,                  icon:'◎', label:'People Layer',           msg:"Your org chart lives here. Let me show you what you can build..." },
+    { layer:'people',   id:'maven-people-add',    icon:'◎', label:'Adding Roles',           msg:"This is where you build your team. Every role needs three things: who fills it (or mark it Vacant if unfilled), what they own, and what winning looks like for them. Specificity here changes everything — vague ownership creates real organizational pain." },
+    { layer:'people',   id:'maven-people-grade',  icon:'◎', label:'Clarity Grading',        msg:"Once your team is in, click 'Grade This Layer.' I'll score each role 0-100 on specificity of ownership and clarity of success criteria — with direct feedback on how to sharpen each one. Industry benchmarks are used to contextualize every grade." },
+    { layer:'rhythm',   id:'maven-rhythm-setup',  icon:'◇', label:'Rhythm Layer',           msg:"Healthy organizations run on healthy rhythms. This is where you map every meeting cadence — its name, frequency, duration, who attends, and its purpose. Most teams have too many meetings with unclear goals. I'll grade yours and tell you exactly what to keep, cut, or change." },
+    { layer:'health',   id:'maven-pohi-banner',   icon:'◉', label:'Health Overview — POHI', msg:"Once all three layers are built, run your POHI analysis here. It scores you across 6 dimensions — Purpose Clarity, People Clarity, Operational Rhythm, Structural Integrity, Cultural Alignment, and Growth Readiness — using real industry benchmarks for your organization type." },
   ];
 
   const OB_STEPS = [
@@ -2168,6 +2197,24 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
     { key:'people',      label:'Team Roles',           q:() => "Now let's sketch your team. Tell me the key roles in your organization — something like 'John Smith as Executive Director, Jane as Operations Manager, two open coordinator positions.' Don't worry about perfection." },
     { key:'rhythm',      label:'Meeting Cadences',     q:() => "Finally — what regular meetings or touchpoints does your team currently have? Walk me through your rhythm. For example: 'Weekly staff meeting Mondays 9am, monthly leadership review...'" },
   ];
+
+  // Highlight active tour element
+  useEffect(() => {
+    if (phase !== 'tour') { setHighlightRect(null); return; }
+    const id = TOUR[tourIdx]?.id;
+    if (!id) { setHighlightRect(null); return; }
+    const timer = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          const r = el.getBoundingClientRect();
+          setHighlightRect({ top: r.top - 8, left: r.left - 8, width: r.width + 16, height: r.height + 16 });
+        }, 250);
+      } else { setHighlightRect(null); }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [phase, tourIdx]);
 
   // Check on mount if user is new (no conversations)
   useEffect(() => {
@@ -2323,7 +2370,7 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
       {phase==='welcome' && (
         <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.95)',backdropFilter:'blur(10px)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
           <div style={{background:'#0D2236',border:'1px solid rgba(242,103,81,0.25)',borderRadius:18,padding:'44px 48px',maxWidth:540,width:'100%',textAlign:'center',animation:'fadeUp 0.5s ease both',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
-            <div style={{width:64,height:64,borderRadius:'50%',background:'rgba(242,103,81,0.12)',border:'2px solid rgba(242,103,81,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 24px'}}>✦</div>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:20}}><MavenMascot size={72} /></div>
             <h2 style={{fontFamily:DISPLAY,fontSize:26,fontWeight:700,color:'#F5F7FA',margin:'0 0 16px'}}>Welcome to Perspexis.</h2>
             <p style={{fontFamily:BODY,fontSize:15,color:'#94A3B8',lineHeight:1.85,margin:'0 0 32px'}}>I'm Maven — your organizational clarity guide. You've just stepped into your new home, and I'm here to help you build something remarkable inside it.<br/><br/>Let me show you around, then I'll help you get set up.</p>
             <div style={{display:'flex',gap:12,justifyContent:'center'}}>
@@ -2335,13 +2382,16 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
       )}
 
       {/* ── Tour ── */}
+      {phase==='tour' && highlightRect && (
+        <div style={{ position:'fixed', top:highlightRect.top, left:highlightRect.left, width:highlightRect.width, height:highlightRect.height, border:'2px solid #F26751', borderRadius:10, animation:'maven-highlight 2s ease-in-out infinite', zIndex:797, pointerEvents:'none' }} />
+      )}
       {phase==='tour' && (
         <>
           <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.45)',backdropFilter:'blur(2px)',zIndex:798}} />
           <div style={{position:'fixed',bottom:28,left:'50%',transform:'translateX(-50%)',width:'90%',maxWidth:540,zIndex:799,animation:'fadeUp 0.3s ease both'}}>
             <div style={{background:'#0D2236',border:'1px solid rgba(242,103,81,0.22)',borderRadius:14,padding:'24px 28px',boxShadow:'0 16px 60px rgba(0,0,0,0.6)'}}>
               <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
-                <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(242,103,81,0.12)',border:'1px solid rgba(242,103,81,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>✦</div>
+                <MavenMascot size={38} />
                 <div>
                   <p style={{fontFamily:MONO,fontSize:9,color:'#F26751',textTransform:'uppercase',letterSpacing:1.5,margin:0}}>Maven · {tourIdx+1} of {TOUR.length}</p>
                   <p style={{fontFamily:DISPLAY,fontSize:15,fontWeight:700,color:'#F5F7FA',margin:'3px 0 0'}}>{TOUR[tourIdx].icon} {TOUR[tourIdx].label}</p>
@@ -2380,7 +2430,7 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
         <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.97)',backdropFilter:'blur(12px)',zIndex:800,display:'flex',flexDirection:'column',fontFamily:DISPLAY}}>
           <div style={{padding:'16px 28px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
             <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(242,103,81,0.15)',border:'1px solid rgba(242,103,81,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15}}>✦</div>
+              <MavenMascot size={34} />
               <div>
                 <p style={{fontFamily:DISPLAY,fontSize:14,fontWeight:700,color:'#F5F7FA',margin:0}}>Maven · Building {orgName||'Your Organization'}</p>
                 <p style={{fontFamily:MONO,fontSize:9,color:obLoading?'#F26751':'#2EC4B6',margin:0,textTransform:'uppercase',letterSpacing:1.5}}>{obLoading?'Working...':`Step ${obStep+1} of ${OB_STEPS.length} — ${OB_STEPS[obStep]?.label}`}</p>
@@ -2420,7 +2470,7 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
       {phase==='done' && (
         <div style={{position:'fixed',inset:0,background:'rgba(7,24,39,0.95)',backdropFilter:'blur(8px)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
           <div style={{background:'#0D2236',border:'1px solid rgba(46,196,182,0.25)',borderRadius:18,padding:'44px 48px',maxWidth:500,width:'100%',textAlign:'center',animation:'fadeUp 0.4s ease both',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
-            <div style={{fontSize:44,marginBottom:20}}>🏠</div>
+            <div style={{display:'flex',justifyContent:'center',marginBottom:20}}><MavenMascot size={60} /></div>
             <h3 style={{fontFamily:DISPLAY,fontSize:22,fontWeight:700,color:'#F5F7FA',margin:'0 0 14px'}}>You're home.</h3>
             <p style={{fontFamily:BODY,fontSize:14,color:'#94A3B8',lineHeight:1.85,margin:'0 0 24px'}}>Your organizational operating system is ready. I'll be right here whenever you need me.</p>
             <div style={{padding:'16px 20px',background:'rgba(242,103,81,0.08)',border:'1px solid rgba(242,103,81,0.2)',borderRadius:10,marginBottom:28,display:'flex',alignItems:'center',gap:14}}>
@@ -2435,12 +2485,12 @@ function MavenExperience({ user, orgName, orgType, identity, people, gaps, rhyth
       {/* ── Chat bubble + popover ── */}
       {phase===null && (
         <>
-          <button onClick={()=>setChatOpen(o=>!o)} style={{position:'fixed',bottom:24,right:24,width:54,height:54,borderRadius:'50%',background:'#F26751',border:'2px solid rgba(255,255,255,0.15)',boxShadow:'0 4px 20px rgba(242,103,81,0.45)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,zIndex:600,transition:'transform 0.2s'}} onMouseEnter={e=>e.target.style.transform='scale(1.08)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}>✦</button>
+          <button onClick={()=>setChatOpen(o=>!o)} style={{position:'fixed',bottom:24,right:24,width:58,height:58,borderRadius:'50%',background:'rgba(7,24,39,0.95)',border:'2px solid rgba(242,103,81,0.4)',boxShadow:'0 4px 24px rgba(242,103,81,0.35)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:600,padding:0}}><MavenMascot size={42} /></button>
           {chatOpen && (
             <div style={{position:'fixed',bottom:90,right:24,width:370,height:500,background:'#0B1E2E',border:'1px solid var(--border)',borderRadius:16,zIndex:601,display:'flex',flexDirection:'column',boxShadow:'-4px -4px 40px rgba(0,0,0,0.5)',animation:'fadeUp 0.2s ease both',overflow:'hidden'}}>
               <div style={{padding:'13px 16px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:9}}>
-                  <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(242,103,81,0.15)',border:'1px solid rgba(242,103,81,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>✦</div>
+                  <MavenMascot size={28} />
                   <div>
                     <p style={{fontFamily:DISPLAY,fontSize:13,fontWeight:700,color:'var(--text-primary)',margin:0}}>Maven</p>
                     <p style={{fontFamily:MONO,fontSize:8,color:chatLoading?'#F26751':'#2EC4B6',margin:0,textTransform:'uppercase',letterSpacing:1.5}}>{chatLoading?'Thinking...':'Your Perspexis Guide'}</p>
@@ -2944,6 +2994,10 @@ function PerspexisCore() {
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes arcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes arcFade { 0% { opacity: 1; } 50% { opacity: 0.15; } 100% { opacity: 1; } }
+        @keyframes maven-ring { 0%,100%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.12);opacity:0.3;} }
+        @keyframes maven-bar  { from{transform:scaleY(0.25);} to{transform:scaleY(1);} }
+        @keyframes maven-glow { 0%,100%{opacity:0.4;transform:scale(1);} 50%{opacity:0.9;transform:scale(1.2);} }
+        @keyframes maven-highlight { 0%,100%{box-shadow:0 0 0 4px rgba(242,103,81,0.15),0 0 20px rgba(242,103,81,0.2);} 50%{box-shadow:0 0 0 10px rgba(242,103,81,0.06),0 0 50px rgba(242,103,81,0.45);} }
         button { transition: opacity 0.15s ease; }
         button:hover:not(:disabled) { opacity: 0.82; }
         input, textarea { background: rgba(255,255,255,0.05) !important; color: #F5F7FA !important; border-color: #243746 !important; }
