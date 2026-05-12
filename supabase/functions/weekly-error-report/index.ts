@@ -8,7 +8,7 @@
  *   '0 9 * * 5',
  *   $$
  *   SELECT net.http_post(
- *     url := 'https://mtjthyjyzlfjmxefgqnq.supabase.co/functions/v1/weekly-error-report',
+ *     url := 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/weekly-error-report',
  *     headers := '{"Content-Type":"application/json","Authorization":"Bearer YOUR_SERVICE_ROLE_KEY"}'::jsonb,
  *     body := '{}'::jsonb
  *   )
