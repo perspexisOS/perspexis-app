@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_URL      || "https://mtjthyjyzlfjmxefgqnq.supabase.co",
+  import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_1Vjg0GBeHL1ucCBETI5nOg_Vb3aMkHY"
 );
 
 // ─── Default Kingdom House Data ───────────────────────────────────────────────
